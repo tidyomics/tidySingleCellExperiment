@@ -198,7 +198,7 @@ filter.SingleCellExperiment <- function(.data, ..., .preserve=FALSE) {
 #' @name group_by
 #' @rdname group_by
 #' @inherit dplyr::group_by
-#' @seealso \code{}
+#' @seealso \code{\link[dplyr]{group_by}}
 #'
 #' @examples
 #' data(pbmc_small)

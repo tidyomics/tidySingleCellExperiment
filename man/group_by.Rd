@@ -101,5 +101,5 @@ Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics eco
 Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
 }
 \seealso{
-\code{}
+\code{\link[dplyr]{group_by}}
 }

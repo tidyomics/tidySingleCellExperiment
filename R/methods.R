@@ -40,7 +40,7 @@ setClass("tidySingleCellExperiment", contains="SingleCellExperiment")
 #' @importFrom stringr str_subset
 #' @export
 setMethod("join_features", "SingleCellExperiment", function(.data,
-    features=NULL, all=FALSE, exclude_zeros=FALSE, shape="long", ...) {
+    features=NULL, all=FALSE, exclude_zeros=FALSE, shape="wide", ...) {
     # CRAN Note
     .cell <- NULL
     .feature <- NULL
@@ -157,7 +157,7 @@ tidy.SingleCellExperiment <- function(object) {
 #' @importFrom dplyr mutate
 #' @importFrom dplyr pull
 #' @importFrom dplyr left_join
-#' @importFrom dplyr unnest
+#' @importFrom tidyr unnest
 #' @importFrom S4Vectors DataFrame
 #' @importFrom methods as
 #'
@@ -170,6 +170,9 @@ setMethod("aggregate_cells", "SingleCellExperiment", function(.data,
 
     # Fix NOTEs
     feature <- NULL
+    .feature <- NULL
+    my_id_to_split_by___ <- NULL
+    assay_name <- NULL
     .sample <- enquo(.sample)
 
     # Subset only wanted assays
