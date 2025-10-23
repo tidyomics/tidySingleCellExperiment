@@ -93,6 +93,7 @@ unnest_single_cell_experiment  <-  function(data, cols, ...,
 #' @importFrom tidyr nest
 #' @importFrom rlang enquos
 #' @importFrom rlang :=
+#' @importFrom dplyr n
 #' @export
 nest.SingleCellExperiment <- function(.data, ..., .names_sep = NULL) {
 

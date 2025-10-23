@@ -184,7 +184,7 @@ Here we plot abundance of two features for each group.
 
 ```{r}
 pbmc_small_polished %>%
-    join_features(features=c("HLA-DRA", "LYZ")) %>%
+    join_features(features=c("HLA-DRA", "LYZ"), shape="long") %>%
     ggplot(aes(groups, .abundance_counts + 1, fill=groups)) +
     geom_boxplot(outlier.shape=NA) +
     geom_jitter(aes(size=nCount_RNA), alpha=0.5, width=0.2) +
@@ -267,11 +267,12 @@ marker_genes <-
     map(~ .x %>%
         head(10) %>%
         rownames()) %>%
-    unlist()
+    unlist() %>%
+    unique()
 
 # Plot heatmap
 pbmc_small_cluster %>%
-    join_features(features=marker_genes) %>%
+    join_features(features=marker_genes, shape="long") %>%
     group_by(label) %>%
     heatmap(
         .row=.feature, .column=.cell, 
