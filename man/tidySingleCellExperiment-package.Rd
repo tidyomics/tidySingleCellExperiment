@@ -45,8 +45,7 @@ The code can be viewed at the GitHub repository:
 \url{https://github.com/stemangiola/tidySingleCellExperiment}
 }
 \references{
-Mangiola S, Papenfuss AT (2020). "tidySingleCellExperiment: an R package for
-bringing Bioconductor to the tidyverse." BMC Bioinformatics.
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
 }
 \seealso{
 Useful links:
