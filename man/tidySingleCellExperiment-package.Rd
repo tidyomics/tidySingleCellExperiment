@@ -30,7 +30,7 @@ The main features are:
   \item Direct plotting with \code{\link[ggplot2]{ggplot}} and \code{\link[plotly]{plot_ly}}
   \item \code{\link{aggregate_cells}} - Aggregate cell gene-transcription abundance as pseudobulk tissue
   \item \code{\link{as_tibble}} - Convert cell-wise information to a tibble
-  \item \code{join_features} - Add feature-wise information, returns a tidySingleCellExperiment object
+  \item \code{\link{join_features}} - Add feature-wise information, returns a tidySingleCellExperiment object
 }
 
 For detailed information on usage, see the package vignette, by typing
@@ -60,8 +60,8 @@ Related packages:
 \itemize{
   \item \code{\link[SingleCellExperiment]{SingleCellExperiment}} - The core Bioconductor single-cell data structure
   \item \code{\link[tidySummarizedExperiment]{tidySummarizedExperiment}} - For tidy manipulation of SummarizedExperiment objects
-  \item \code{tidyseurat} - For tidy manipulation of Seurat objects
-  \item \code{tidybulk} - For tidy bulk RNA-seq data analysis
+  \item tidyseurat - For tidy manipulation of Seurat objects
+  \item tidybulk - For tidy bulk RNA-seq data analysis
 }
 }
 \author{
