@@ -1,0 +1,67 @@
+#' tidySingleCellExperiment: Brings SingleCellExperiment to the Tidyverse
+#'
+#' @description
+#' The tidySingleCellExperiment package provides a bridge between Bioconductor
+#' single-cell packages and the tidyverse. It enables viewing the Bioconductor
+#' SingleCellExperiment object as a tidyverse tibble, and provides
+#' SingleCellExperiment-compatible dplyr, tidyr, ggplot and plotly functions.
+#' This allows users to get the best of both Bioconductor and tidyverse worlds.
+#'
+#' @details
+#' tidySingleCellExperiment is an adapter that abstracts the SingleCellExperiment
+#' container in the form of a tibble. This allows *tidy* data manipulation, nesting,
+#' and plotting. For example, a tidySingleCellExperiment is directly compatible
+#' with functions from tidyverse packages dplyr and tidyr, as well as plotting
+#' with ggplot2 and plotly. In addition, the package provides various utility
+#' functions specific to single-cell omics data analysis (e.g., aggregation of
+#' cell-level data to pseudobulks).
+#'
+#' The main features are:
+#'
+#' \itemize{
+#'   \item Full compatibility with SingleCellExperiment methods
+#'   \item Tidy manipulation with \code{\link[dplyr]{dplyr}} functions: \code{select}, \code{filter}, \code{mutate}, \code{arrange}, etc.
+#'   \item Tidy transformation with \code{\link[tidyr]{tidyr}} functions: \code{pivot_longer}, \code{nest}, \code{unnest}, etc.
+#'   \item Direct plotting with \code{\link[ggplot2]{ggplot}} and \code{\link[plotly]{plot_ly}}
+#'   \item \code{\link{aggregate_cells}} - Aggregate cell gene-transcription abundance as pseudobulk tissue
+#'   \item \code{\link{as_tibble}} - Convert cell-wise information to a tibble
+#'   \item \code{\link{join_features}} - Add feature-wise information, returns a tidySingleCellExperiment object
+#' }
+#'
+#' For detailed information on usage, see the package vignette, by typing
+#' \code{vignette("introduction", package = "tidySingleCellExperiment")}.
+#'
+#' All software-related questions should be posted to the Bioconductor Support Site:
+#'
+#' \url{https://support.bioconductor.org}
+#'
+#' The code can be viewed at the GitHub repository:
+#'
+#' \url{https://github.com/stemangiola/tidySingleCellExperiment}
+#'
+#' @references
+#' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+#'
+#' @seealso
+#' Useful links:
+#' \itemize{
+#'   \item \url{https://github.com/stemangiola/tidySingleCellExperiment}
+#'   \item \url{https://stemangiola.github.io/tidySingleCellExperiment/}
+#'   \item Report bugs at \url{https://github.com/stemangiola/tidySingleCellExperiment/issues}
+#' }
+#'
+#' Related packages:
+#' \itemize{
+#'   \item \code{\link[SingleCellExperiment]{SingleCellExperiment}} - The core Bioconductor single-cell data structure
+#'   \item \code{\link[tidySummarizedExperiment]{tidySummarizedExperiment}} - For tidy manipulation of SummarizedExperiment objects
+#'   \item tidyseurat - For tidy manipulation of Seurat objects
+#'   \item tidybulk - For tidy bulk RNA-seq data analysis
+#' }
+#'
+#' @author Stefano Mangiola \email{mangiolastefano@@gmail.com}
+#'
+#' @docType package
+#' @name tidySingleCellExperiment-package
+#' @aliases tidySingleCellExperiment
+#' @keywords internal
+"_PACKAGE"
