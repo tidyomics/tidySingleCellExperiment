@@ -2,9 +2,10 @@
 % Please edit documentation in R/methods.R
 \name{join_features}
 \alias{join_features}
-\title{Add differential featureion information to a tbl using edgeR.}
+\alias{join_features,SingleCellExperiment-method}
+\title{join_features}
 \usage{
-join_features(
+\S4method{join_features}{SingleCellExperiment}(
   .data,
   features = NULL,
   all = FALSE,
@@ -24,24 +25,23 @@ join_features(
 
 \item{shape}{Format of the returned table "long" or "wide"}
 
-\item{...}{Parameters to pass to join wide, i.e. assay name to extract feature abundance from}
+\item{...}{Parameters to pass to join wide, i.e. assay name to extract feature abundance from and gene prefix, for shape="wide"}
 }
 \value{
-A \code{tbl} containing the information.for the specified features
+A `tidySingleCellExperiment` object
+  containing information for the specified features.
 }
 \description{
 join_features() extracts and joins information for specific
-features
+  features
 }
 \details{
-\lifecycle{experimental}
-
 This function extracts information for specified features and
-returns the information in either long or wide format.
+  returns the information in either long or wide format.
 }
 \examples{
+data("pbmc_small")
+pbmc_small \%>\% join_features(
+  features=c("HLA-DRA", "LYZ"))
 
-tidySingleCellExperiment::pbmc_small \%>\%
-
-    join_features(features=c("HLA-DRA", "LYZ"))
 }

@@ -9,7 +9,7 @@
 to_tib <- function(.data) {
     colData(.data) %>%
         as.data.frame() %>%
-        as_tibble(rownames="cell")
+        as_tibble(rownames=c_(.data)$name)
 }
 
 # Greater than
@@ -84,6 +84,7 @@ drop_class <- function(var, name) {
 #' @importFrom magrittr "%$%"
 #' @importFrom utils tail
 #' @importFrom SummarizedExperiment assays
+#' @importFrom stats setNames
 #'
 #' @param .data A tidySingleCellExperiment
 #' @param features A character
@@ -95,7 +96,7 @@ drop_class <- function(var, name) {
 #'
 #'
 #' @noRd
-get_abundance_sc_wide <- function(.data, features=NULL, all=FALSE, assay = assays(.data) %>% as.list() %>% tail(1) %>% names ) {
+get_abundance_sc_wide <- function(.data, features=NULL, all=FALSE, assay = assays(.data) %>% as.list() %>% tail(1) %>% names,  prefix = "" ) {
 
     # Solve CRAN warnings
     . <- NULL
@@ -142,7 +143,10 @@ get_abundance_sc_wide <- function(.data, features=NULL, all=FALSE, assay = assay
         ) %>%
         as.matrix() %>%
         t() %>%
-        as_tibble(rownames="cell")
+        as_tibble(rownames=c_(.data)$name) %>%
+
+        # Add prefix
+        setNames(c(c_(.data)$name, sprintf("%s%s", prefix, colnames(.)[-1])))
 }
 
 #' get abundance long
@@ -231,17 +235,17 @@ get_abundance_sc_long <- function(.data, features=NULL, all=FALSE, exclude_zeros
                 }, ~ (.)) %>%
                 as.matrix() %>%
                 data.frame(check.names = FALSE) %>%
-                as_tibble(rownames="feature") %>%
+                as_tibble(rownames=".feature") %>%
                 tidyr::pivot_longer(
-                    cols=-feature,
-                    names_to="cell",
-                    values_to="abundance" %>% paste(.y, sep="_"),
+                    cols=- .feature,
+                    names_to=c_(.data)$name,
+                    values_to=".abundance" %>% paste(.y, sep="_"),
                     values_drop_na=TRUE
                 )
             # %>%
             # mutate_if(is.character, as.factor) %>%
         ) %>%
-        Reduce(function(...) full_join(..., by=c("feature", "cell")), .)
+        Reduce(function(...) full_join(..., by=c(".feature", c_(.data)$name)), .)
 }
 
 #' @importFrom dplyr select_if
@@ -258,13 +262,31 @@ as_meta_data <- function(.data, SingleCellExperiment_object) {
     # Solve CRAN warnings
     . <- NULL
 
-    col_to_exclude <- get_special_columns(SingleCellExperiment_object)
+    col_to_exclude <-
 
-    .data %>%
-        select_if(!colnames(.) %in% col_to_exclude) %>%
-        # select(-one_of(col_to_exclude)) %>%
-        data.frame(row.names="cell") %>%
-        DataFrame()
+      # special_datasets_to_tibble(SingleCellExperiment_object) |>
+      # colnames()
+      get_special_columns(SingleCellExperiment_object) |>
+
+
+      # I need this in case we have multiple reduced dimension data frames with overlapping names of the columns.
+      # For example multiple PCA versions
+      vctrs::vec_as_names(repair = "unique") |>
+
+    # To avoid name change by the bind_cols of as_tibble
+    trick_to_avoid_renaming_of_already_unique_columns_by_dplyr()
+
+    .data_df =
+      .data %>%
+      select_if(!colnames(.) %in% col_to_exclude) %>%
+      data.frame()
+
+    # Set row names in a robust way. the argument row.names of the data.frame function does not work for 1-row data frames
+    rownames(.data_df) = .data_df |> pull(!!c_(SingleCellExperiment_object)$symbol)
+    .data_df = .data_df |> select(-!!c_(SingleCellExperiment_object)$symbol)
+
+    .data_df %>% DataFrame()
+
 }
 
 #' @importFrom purrr map_chr
@@ -295,9 +317,9 @@ get_special_datasets <- function(SingleCellExperiment_object, n_dimensions_to_re
     })
 }
 
-get_needed_columns <- function() {
-    # c("cell",  "orig.ident", "nCount_RNA", "nFeature_RNA")
-    c("cell")
+get_needed_columns <- function(.data) {
+
+  c(c_(.data)$name)
 }
 
 #' Convert array of quosure (e.g. c(col_a, col_b)) into character vector
@@ -330,3 +352,177 @@ select_helper <- function(.data, ...) {
 data_frame_returned_message = "tidySingleCellExperiment says: A data frame is returned for independent data analysis."
 duplicated_cell_names = "tidySingleCellExperiment says: This operation lead to duplicated cell names. A data frame is returned for independent data analysis."
 
+# This function is used for the change of special sample column to .sample
+# Check if "sample" is included in the query and is not part of any other existing annotation
+#' @importFrom stringr str_detect
+#' @importFrom stringr regex
+is_sample_feature_deprecated_used = function(.data, user_columns, use_old_special_names = FALSE){
+
+  old_standard_is_used_for_cell =
+    (
+      ( any(str_detect(user_columns  , regex("\\bcell\\b"))) & !any(str_detect(user_columns  , regex("\\W*(\\.cell)\\W*")))  ) |
+        "cell" %in% user_columns
+    ) &
+    !"cell" %in% colnames(colData(.data))
+
+  old_standard_is_used = old_standard_is_used_for_cell
+
+  if(old_standard_is_used){
+    warning("tidySingleCellExperiment says: from version 1.3.1, the special columns including cell id (colnames(se)) has changed to \".cell\". This dataset is returned with the old-style vocabulary (cell), however we suggest to update your workflow to reflect the new vocabulary (.cell)")
+
+    use_old_special_names = TRUE
+  }
+
+  use_old_special_names
+}
+
+get_special_column_name_symbol = function(name){
+  list(name = name, symbol = as.symbol(name))
+}
+
+# Key column names
+#' @importFrom S4Vectors metadata
+#' @importFrom S4Vectors metadata<-
+ping_old_special_column_into_metadata = function(.data){
+
+  metadata(.data)$cell__ = get_special_column_name_symbol("cell")
+
+  .data
+}
+
+get_special_column_name_cell = function(name){
+  list(name = name, symbol = as.symbol(name))
+}
+
+cell__ = get_special_column_name_symbol(".cell")
+
+#' @importFrom S4Vectors metadata
+c_ =  function(x){
+  # Check if old deprecated columns are used
+  if("cell__" %in% names(metadata(x))) cell__ = metadata(x)$cell__
+  return(cell__)
+}
+
+#' Add attribute to abject
+#'
+#' @keywords internal
+#' @noRd
+#'
+#'
+#' @param var A tibble
+#' @param attribute An object
+#' @param name A character name of the attribute
+#'
+#' @return A tibble with an additional attribute
+add_attr = function(var, attribute, name) {
+  attr(var, name) <- attribute
+  var
+}
+
+#' @importFrom purrr reduce
+#' @importFrom tibble enframe
+special_datasets_to_tibble = function(.singleCellExperiment, ...){
+  x =
+    .singleCellExperiment |>
+    get_special_datasets(...) %>%
+    map(~ .x %>% when(
+
+      # If row == 1 do a trick
+      dim(.) %>% is.null() ~ {
+        (.) %>%
+          tibble::enframe() %>%
+          spread(name, value)
+      },
+
+      # Otherwise continue normally
+      ~ as_tibble(.)
+    )) %>%
+    reduce(bind_cols)
+
+  # To avoid name change by the bind_cols of as_tibble
+  colnames(x) = colnames(x) |> trick_to_avoid_renaming_of_already_unique_columns_by_dplyr()
+
+  x
+}
+
+#' @importFrom stringr str_replace_all
+trick_to_avoid_renaming_of_already_unique_columns_by_dplyr = function(x){
+  x |> str_replace_all("\\.\\.\\.", "___")
+}
+
+#' Get specific annotation columns
+#'
+#' @keywords internal
+#' @noRd
+#' 
+#' @importFrom rlang enquo
+#' @importFrom purrr map
+#' @importFrom dplyr distinct_at
+#' @importFrom magrittr equals
+#' @importFrom dplyr vars
+#' 
+#' @param .data A tibble
+#' @param .col A vector of column names
+#' 
+#' @return A character
+get_specific_annotation_columns = function(.data, .col){
+  
+  # Comply with CRAN NOTES
+  . = NULL
+  
+  # Make col names
+  .col = enquo(.col)
+  
+  # x-annotation df
+  n_x = .data %>% distinct_at(vars(!!.col)) %>% nrow
+  
+  # element wise columns
+  .data %>%
+    select(-!!.col) %>%
+    colnames %>%
+    map(
+      ~
+        .x %>%
+        when(
+          .data %>%
+            distinct_at(vars(!!.col, .x)) %>%
+            nrow %>%
+            equals(n_x) ~ (.),
+          ~ NULL
+        )
+    ) %>%
+    
+    # Drop NULL
+    {	(.)[lengths((.)) != 0]	} %>%
+    unlist
+}
+
+#' Subset columns
+#'
+#' @keywords internal
+#' @noRd
+#' 
+#' @importFrom rlang enquo
+#' 
+#' @param .data A tibble
+#' @param .column A vector of column names
+#'
+#' @return A tibble
+subset = function(.data, .column)	{
+
+  # Make col names
+  .column = enquo(.column)
+  
+  # Check if column present
+  if(quo_names(.column) %in% colnames(.data) %>% all %>% `!`)
+    stop("nanny says: some of the .column specified do not exist in the input data frame.")
+  
+  .data %>%
+    
+    # Selecting the right columns
+    select(	!!.column,	get_specific_annotation_columns(.data, !!.column)	) %>%
+    distinct()
+}
+
+feature__ = get_special_column_name_symbol(".feature")
+sample__ = get_special_column_name_symbol(".sample")

@@ -2,12 +2,12 @@
 % Please edit documentation in R/dplyr_methods.R
 \name{count}
 \alias{count}
+\alias{count.SingleCellExperiment}
+\alias{add_count.SingleCellExperiment}
 \alias{add_count}
-\alias{add_count.default}
-\alias{add_count.tidySingleCellExperiment}
-\title{Count observations by group}
+\title{Count the observations in each group}
 \usage{
-count(
+\method{count}{SingleCellExperiment}(
   x,
   ...,
   wt = NULL,
@@ -16,40 +16,16 @@ count(
   .drop = group_by_drop_default(x)
 )
 
-add_count(
-  x,
-  ...,
-  wt = NULL,
-  sort = FALSE,
-  name = NULL,
-  .drop = group_by_drop_default(x)
-)
-
-\method{add_count}{default}(
-  x,
-  ...,
-  wt = NULL,
-  sort = FALSE,
-  name = NULL,
-  .drop = group_by_drop_default(x)
-)
-
-\method{add_count}{tidySingleCellExperiment}(
-  x,
-  ...,
-  wt = NULL,
-  sort = FALSE,
-  name = NULL,
-  .drop = group_by_drop_default(x)
-)
+\method{add_count}{SingleCellExperiment}(x, ..., wt = NULL, sort = FALSE, name = NULL)
 }
 \arguments{
 \item{x}{A data frame, data frame extension (e.g. a tibble), or a
 lazy data frame (e.g. from dbplyr or dtplyr).}
 
-\item{...}{<\code{\link[=dplyr_data_masking]{data-masking}}> Variables to group by.}
+\item{...}{<\code{\link[rlang:args_data_masking]{data-masking}}> Variables to group
+by.}
 
-\item{wt}{<\code{\link[=dplyr_data_masking]{data-masking}}> Frequency weights.
+\item{wt}{<\code{\link[rlang:args_data_masking]{data-masking}}> Frequency weights.
 Can be \code{NULL} or a variable:
 \itemize{
 \item If \code{NULL} (the default), counts the number of rows in each group.
@@ -61,11 +37,17 @@ Can be \code{NULL} or a variable:
 \item{name}{The name of the new column in the output.
 
 If omitted, it will default to \code{n}. If there's already a column called \code{n},
-it will error, and require you to specify the name.}
+it will use \code{nn}. If there's a column called \code{n} and \code{nn}, it'll use
+\code{nnn}, and so on, adding \code{n}s until it gets a new name.}
 
-\item{.drop}{For \code{count()}: if \code{FALSE} will include counts for empty groups
-(i.e. for levels of factors that don't exist in the data). Deprecated in
-\code{add_count()} since it didn't actually affect the output.}
+\item{.drop}{Handling of factor levels that don't appear in the data, passed
+on to \code{\link[dplyr:group_by]{group_by()}}.
+
+For \code{count()}: if \code{FALSE} will include counts for empty groups (i.e. for
+levels of factors that don't exist in the data).
+
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} For \code{add_count()}: deprecated since it
+can't actually affect the output.}
 }
 \value{
 An object of the same type as \code{.data}. \code{count()} and \code{add_count()}
@@ -74,19 +56,16 @@ group transiently, so the output has the same groups as the input.
 \description{
 \code{count()} lets you quickly count the unique values of one or more variables:
 \code{df \%>\% count(a, b)} is roughly equivalent to
-\code{df \%>\% group_by(a, b) \%>\% summarise(n=n())}.
+\code{df \%>\% group_by(a, b) \%>\% summarise(n = n())}.
 \code{count()} is paired with \code{tally()}, a lower-level helper that is equivalent
-to \code{df \%>\% summarise(n=n())}. Supply \code{wt} to perform weighted counts,
-switching the summary from \code{n=n()} to \code{n=sum(wt)}.
+to \code{df \%>\% summarise(n = n())}. Supply \code{wt} to perform weighted counts,
+switching the summary from \code{n = n()} to \code{n = sum(wt)}.
 
-\code{add_count()} are \code{add_tally()} are equivalents to \code{count()} and \code{tally()}
+\code{add_count()} and \code{add_tally()} are equivalents to \code{count()} and \code{tally()}
 but use \code{mutate()} instead of \code{summarise()} so that they add a new column
 with group-wise counts.
 }
 \examples{
-
-`\%>\%` <- magrittr::`\%>\%`
-pbmc_small \%>\%
-
-    count(groups)
+pbmc_small |> count(groups)
+    
 }
