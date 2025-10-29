@@ -2,8 +2,8 @@
 % Please edit documentation in R/tidySingleCellExperiment-package.R
 \docType{package}
 \name{tidySingleCellExperiment-package}
-\alias{tidySingleCellExperiment}
 \alias{tidySingleCellExperiment-package}
+\alias{tidySingleCellExperiment}
 \title{tidySingleCellExperiment: Brings SingleCellExperiment to the Tidyverse}
 \description{
 The tidySingleCellExperiment package provides a bridge between Bioconductor
