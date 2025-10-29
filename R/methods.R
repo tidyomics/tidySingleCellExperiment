@@ -107,10 +107,9 @@ setMethod("join_features", "SingleCellExperiment", function(.data,
 #' @references
 #' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
 #'
+#' @importFrom generics tidy
 #' @export
-tidy <- function(object) {
-    UseMethod("tidy", object)
-}
+generics::tidy
 
 #' @rdname tidy
 #' @importFrom lifecycle deprecate_warn

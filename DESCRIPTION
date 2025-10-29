@@ -1,7 +1,7 @@
 Type: Package
 Package: tidySingleCellExperiment
 Title: Brings SingleCellExperiment to the Tidyverse 
-Version: 1.19.3
+Version: 1.19.4
 Authors@R: c(person("Stefano", "Mangiola", 
     comment=c(ORCID="0000-0001-7474-836X"),
     email="mangiolastefano@gmail.com",
@@ -42,7 +42,8 @@ Imports:
     cli,
     fansi,
     Matrix,
-    stats
+    stats,
+    generics
 Suggests:
     BiocStyle,
     testthat,
