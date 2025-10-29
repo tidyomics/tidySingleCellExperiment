@@ -5,7 +5,7 @@
 \alias{tidy.SingleCellExperiment}
 \title{(DEPRECATED) tidy for `SingleCellExperiment`}
 \usage{
-tidy(object)
+tidy(x, ...)
 
 \method{tidy}{SingleCellExperiment}(object)
 }
