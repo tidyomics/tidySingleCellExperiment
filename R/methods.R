@@ -93,11 +93,11 @@ setMethod("join_features", "SingleCellExperiment", function(.data,
     }
 })
 
-#' @name tidy
-#' @rdname tidy
 #' @title (DEPRECATED) tidy for `SingleCellExperiment`
+#' @name tidy.SingleCellExperiment
 #'
-#' @param object A `SingleCellExperiment` object.
+#' @param x A `SingleCellExperiment` object.
+#' @param ... Additional arguments passed to `generics::tidy`. (Unused.)
 #' @return A `tidySingleCellExperiment` object. (DEPRECATED - not needed anymore)
 #'
 #' @examples
@@ -108,11 +108,9 @@ setMethod("join_features", "SingleCellExperiment", function(.data,
 #' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
 #'
 #' @importFrom generics tidy
-
-#' @rdname tidy
 #' @importFrom lifecycle deprecate_warn
 #' @export
-tidy.SingleCellExperiment <- function(object) {
+tidy.SingleCellExperiment <- function(x, ...) {
 
     # DEPRECATE
     deprecate_warn(
@@ -120,7 +118,7 @@ tidy.SingleCellExperiment <- function(object) {
         what="tidy()",
         details="tidySingleCellExperiment says: tidy() is not needed anymore.")
 
-    return(object)
+    return(x)
 }
 
 #' @name aggregate_cells
