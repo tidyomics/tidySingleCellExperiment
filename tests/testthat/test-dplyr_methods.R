@@ -24,9 +24,9 @@ df$factor <- sample(
 #     expect_identical(fd, df)
 # })
 
-test_that("bind_rows()", {
+test_that("append_samples()", {
     # warn about duplicated cells names
-    expect_warning(fd <- bind_rows(df, df))
+    expect_warning(fd <- append_samples(df, df))
     # cell names should be unique after binding
     expect_true(!any(duplicated(pull(fd, .cell))))
 })
@@ -224,6 +224,17 @@ test_that("full_join(), with DataFrame y", {
     #     mutate(df, factor=paste(factor)))
 })
 
+test_that("anti_join()", {
+  y <- df |> 
+    distinct(factor) |> 
+    mutate(string=letters[seq(nlevels(df$factor))]) |> 
+    filter(factor !="g1")
+  fd <- anti_join(df, y, by="factor")
+  expect_s4_class(fd, "SingleCellExperiment")
+  expect_equal(n <- ncol(colData(fd)), ncol(colData(df)))
+  expect_lt(ncol(fd), ncol(df))
+})
+
 test_that("slice()", {
   # I DON'T KNOW WHY THESE TESTS GIVES WARNING 
   # Please use `all_of()` or `any_of()` instead.
@@ -376,3 +387,33 @@ test_that("rowwise()", {
     expect_equal(dim(fd), c(ncol(df), 1))
     expect_identical(fd[[1]], sapply(df$lys, sum))
 })
+
+test_that("group_split() works for one variable", {
+  fd <- df |> 
+    group_split(groups)
+  expect_equal(length(fd), length(unique(df$groups)))
+})
+
+test_that("group_split() works for combination of variables", {
+    fd <- df |> 
+      group_split(groups, ident)
+    expect_equal(length(fd), length(unique(df$groups)) *
+                   length(unique(df$ident)))
+})
+
+test_that("group_split() works for one logical statement", {
+  fd_log <- df |> 
+    group_split(groups=="g1")
+  fd_var <- df |> 
+    group_split(groups=="g1")
+  expect_equal(lapply(fd_var, count), lapply(fd_log, count))
+})
+
+test_that("group_split() works for two logical statements", {
+  fd <- df |>
+    group_split(PC_1>0 & groups=="g1")
+  fd_counts <- lapply(fd, count)
+  expect_equal(c(fd_counts[[1]], fd_counts[[2]], use.names = FALSE), 
+               list(75, 5))
+})
+

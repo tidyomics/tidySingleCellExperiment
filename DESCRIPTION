@@ -1,7 +1,7 @@
 Type: Package
 Package: tidySingleCellExperiment
 Title: Brings SingleCellExperiment to the Tidyverse 
-Version: 1.13.2
+Version: 1.20.1
 Authors@R: c(person("Stefano", "Mangiola", 
     comment=c(ORCID="0000-0001-7474-836X"),
     email="mangiolastefano@gmail.com",
@@ -17,12 +17,12 @@ Description: 'tidySingleCellExperiment' is an adapter that abstracts
     (e.g., aggregation of cell-level data to pseudobulks).
 License: GPL-3
 Depends:
-    R (>= 4.3.0),
-    SingleCellExperiment
+    R (>= 4.4.0),
+    SingleCellExperiment,
+    ttservice (>= 0.4.0)
 Imports:
     dplyr, 
     tidyr, 
-    ttservice (>= 0.4.0),
     SummarizedExperiment,
     tibble,
     ggplot2,
@@ -42,11 +42,13 @@ Imports:
     cli,
     fansi,
     Matrix,
-    stats
+    stats,
+    generics
 Suggests:
     BiocStyle,
     testthat,
     knitr,
+    markdown,
     rmarkdown,
     SingleCellSignalR,
     SingleR,
@@ -58,7 +60,9 @@ Suggests:
     uwot,
     celldex,
     dittoSeq,
-    plotly
+    plotly,
+    rbibutils,
+    prettydoc
 VignetteBuilder: 
     knitr
 RdMacros:
@@ -68,6 +72,6 @@ biocViews:
     AssayDomain, Infrastructure, RNASeq, DifferentialExpression, SingleCell,
     GeneExpression, Normalization, Clustering, QualityControl, Sequencing
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.3
 URL: https://github.com/stemangiola/tidySingleCellExperiment
 BugReports: https://github.com/stemangiola/tidySingleCellExperiment/issues

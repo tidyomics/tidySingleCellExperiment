@@ -3,8 +3,13 @@ title: "Overview of the tidySingleCellExperiment package"
 package: "`r BiocStyle::pkg_ver('tidySingleCellExperiment')`"
 author: "Stefano Mangiola"
 output:
-  BiocStyle::html_document:
-    toc_float: true
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    fig_caption: true
+    df_print: paged
 bibliography: tidySingleCellExperiment.bib
 vignette: >
   %\VignetteIndexEntry{Overview of the tidySingleCellExperiment package}
@@ -34,7 +39,7 @@ __*tidyverse*__ |
 `plotly`        | Plotting with `plot_ly()`
 **Utilities**   |  
 `as_tibble()`   | Convert cell-wise information to a `tbl_df`
-`join_features()`   | Add feature-wise information; <br> returns a `tbl_df`
+`join_features()`   | Add feature-wise information; <br> returns a `tidySingleCellExperiment` object
 `aggregate_cells()` | Aggregate feature abundances as pseudobulks; <br> returns a `SummarizedExperiment`
 : (\#tab:table) Available `tidySingleCellExperiment` functions and utilities.
 
@@ -179,7 +184,7 @@ Here we plot abundance of two features for each group.
 
 ```{r}
 pbmc_small_polished %>%
-    join_features(features=c("HLA-DRA", "LYZ")) %>%
+    join_features(features=c("HLA-DRA", "LYZ"), shape="long") %>%
     ggplot(aes(groups, .abundance_counts + 1, fill=groups)) +
     geom_boxplot(outlier.shape=NA) +
     geom_jitter(aes(size=nCount_RNA), alpha=0.5, width=0.2) +
@@ -262,15 +267,34 @@ marker_genes <-
     map(~ .x %>%
         head(10) %>%
         rownames()) %>%
-    unlist()
+    unlist() %>%
+    unique()
 
 # Plot heatmap
 pbmc_small_cluster %>%
-    join_features(features=marker_genes) %>%
+    join_features(features=marker_genes, shape="long") %>%
     group_by(label) %>%
     heatmap(
         .row=.feature, .column=.cell, 
         .value=.abundance_counts, scale="column")
+```
+
+# Combining datasets
+
+We can use `append_samples()` to combine multiple SingleCellExperiment objects by samples.
+This is useful when you have multiple datasets that you want to analyze together.
+
+```{r}
+# Create two subsets of the data
+pbmc_subset1 <- pbmc_small_cluster %>%
+    filter(groups == "g1")
+
+pbmc_subset2 <- pbmc_small_cluster %>%
+    filter(groups == "g2")
+
+# Combine them using append_samples
+combined_data <- append_samples(pbmc_subset1, pbmc_subset2)
+combined_data
 ```
 
 # Reduce dimensions
@@ -454,7 +478,7 @@ pbmc_small_nested_interactions <-
             cell_signaling(genes=rownames(data), cluster=cluster) %>%
             inter_network(data=data, signal=., genes=rownames(data), cluster=cluster) %$%
             `individual-networks` %>%
-            map_dfr(~ bind_rows(as_tibble(.x)))
+            map_dfr(~ append_samples(as_tibble(.x)))
     }))
 
 pbmc_small_nested_interactions %>%

@@ -29,6 +29,9 @@ setClass("tidySingleCellExperiment", contains="SingleCellExperiment")
 #' pbmc_small %>% join_features(
 #'   features=c("HLA-DRA", "LYZ"))
 #'
+#' @references
+#' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+#' 
 #' @importFrom magrittr "%>%"
 #' @importFrom dplyr contains
 #' @importFrom dplyr everything
@@ -37,7 +40,7 @@ setClass("tidySingleCellExperiment", contains="SingleCellExperiment")
 #' @importFrom stringr str_subset
 #' @export
 setMethod("join_features", "SingleCellExperiment", function(.data,
-    features=NULL, all=FALSE, exclude_zeros=FALSE, shape="long", ...) {
+    features=NULL, all=FALSE, exclude_zeros=FALSE, shape="wide", ...) {
     # CRAN Note
     .cell <- NULL
     .feature <- NULL
@@ -90,26 +93,24 @@ setMethod("join_features", "SingleCellExperiment", function(.data,
     }
 })
 
-#' @name tidy
-#' @rdname tidy
-#' @title tidy for `SingleCellExperiment`
+#' @title (DEPRECATED) tidy for `SingleCellExperiment`
+#' @name tidy.SingleCellExperiment
 #'
-#' @param object A `SingleCellExperiment` object.
-#' @return A `tidySingleCellExperiment` object.
+#' @param x A `SingleCellExperiment` object.
+#' @param ... Additional arguments passed to `generics::tidy`. (Unused.)
+#' @return A `tidySingleCellExperiment` object. (DEPRECATED - not needed anymore)
 #'
 #' @examples
 #' data(pbmc_small)
 #' pbmc_small
 #'
-#' @export
-tidy <- function(object) {
-    UseMethod("tidy", object)
-}
-
-#' @rdname tidy
+#' @references
+#' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+#'
+#' @importFrom generics tidy
 #' @importFrom lifecycle deprecate_warn
 #' @export
-tidy.SingleCellExperiment <- function(object) {
+tidy.SingleCellExperiment <- function(x, ...) {
 
     # DEPRECATE
     deprecate_warn(
@@ -117,7 +118,7 @@ tidy.SingleCellExperiment <- function(object) {
         what="tidy()",
         details="tidySingleCellExperiment says: tidy() is not needed anymore.")
 
-    return(object)
+    return(x)
 }
 
 #' @name aggregate_cells
@@ -130,18 +131,32 @@ tidy.SingleCellExperiment <- function(object) {
 #' pbmc_small_pseudo_bulk <- pbmc_small |>
 #'   aggregate_cells(c(groups, ident), assays="counts")
 #'
+#' @references
+#' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+#' 
 #' @importFrom rlang enquo
 #' @importFrom magrittr "%>%"
 #' @importFrom tibble enframe
 #' @importFrom Matrix rowSums
 #' @importFrom ttservice aggregate_cells
-#' @importFrom SummarizedExperiment assays assays<- assayNames
-#' @importFrom S4Vectors split
+#' @importFrom SummarizedExperiment assays
+#' @importFrom SummarizedExperiment assays<-
+#' @importFrom SummarizedExperiment assayNames
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom SummarizedExperiment rowData<-
 #' @importFrom stringr str_remove
 #' @importFrom dplyr group_split
+#' @importFrom dplyr select
+#' @importFrom tidyr pivot_wider
+#' @importFrom tidyr unite
+#' @importFrom dplyr mutate
+#' @importFrom dplyr pull
+#' @importFrom dplyr left_join
+#' @importFrom tidyr unnest
+#' @importFrom S4Vectors DataFrame
+#' @importFrom methods as
 #'
 #'
-#' @export
 setMethod("aggregate_cells", "SingleCellExperiment", function(.data,
     .sample=NULL, slot="data", assays=NULL,
     aggregation_function=Matrix::rowSums,
@@ -149,6 +164,9 @@ setMethod("aggregate_cells", "SingleCellExperiment", function(.data,
 
     # Fix NOTEs
     feature <- NULL
+    .feature <- NULL
+    my_id_to_split_by___ <- NULL
+    assay_name <- NULL
     .sample <- enquo(.sample)
 
     # Subset only wanted assays
@@ -204,20 +222,32 @@ setMethod("aggregate_cells", "SingleCellExperiment", function(.data,
         ~ .x |> mutate(.aggregated_cells = .y)
       )
 
-
-    do.call(rbind, list_assays) |>
-
-        left_join(
-          .data |>
-            colData() |>
-            as_tibble() |>
-            subset(!!.sample) |>
-            unite("my_id_to_split_by___", !!.sample, remove=FALSE, sep = "___"),
-            by= join_by(".sample" == "my_id_to_split_by___")
-        ) |>
+    aggregated_sce = 
+      do.call(rbind, list_assays) |>
 
         as_SummarizedExperiment(
             .sample=.sample,
             .transcript=.feature,
-            .abundance=!!as.symbol(names(.data@assays)))
+            .abundance=!!as.symbol(names(.data@assays))
+          )
+    
+    new_col_data = 
+      .data |>
+      colData() |>
+      as_tibble() |>
+      subset(!!.sample) |>
+      unite("my_id_to_split_by___", !!.sample, remove=FALSE, sep = "___") 
+    
+    new_col_data = new_col_data |> DataFrame(row.names = new_col_data$my_id_to_split_by___) |> _[,-1,drop=FALSE]
+    
+    colData(aggregated_sce) = 
+      colData(aggregated_sce) |> 
+      cbind(
+        new_col_data[match(rownames(colData(aggregated_sce)), rownames(new_col_data)),,drop=FALSE]
+      )
+    
+    rowData(aggregated_sce)  = rowData(.data)
+    
+    aggregated_sce
+    
 })

@@ -46,7 +46,7 @@ tidyverse Packages | Description
 Utilities | Description
 ------------ | -------------
 `as_tibble` | Convert cell-wise information to a `tbl_df`
-`join_features` | Add feature-wise information, returns a `tbl_df`
+`join_features` | Add feature-wise information, returns a `tidySingleCellExperiment` object
 `aggregate_cells` | Aggregate cell gene-transcription abundance as pseudobulk tissue
 
 
@@ -461,7 +461,7 @@ pbmc_small_nested_interactions <-
             cell_signaling(genes=rownames(data), cluster=cluster) |>
             inter_network(data=data, signal=_, genes=rownames(data), cluster=cluster) %$%
             `individual-networks` |>
-            map_dfr(~ bind_rows(as_tibble(.x)))
+            map_dfr(~ append_samples(as_tibble(.x)))
     }))
 
 pbmc_small_nested_interactions |>
