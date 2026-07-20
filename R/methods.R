@@ -129,125 +129,114 @@ tidy.SingleCellExperiment <- function(x, ...) {
 #' @examples
 #' data(pbmc_small)
 #' pbmc_small_pseudo_bulk <- pbmc_small |>
-#'   aggregate_cells(c(groups, ident), assays="counts")
+#'   aggregate_cells(.by = c(groups, ident), assays = "counts")
+#'
+#' @usage aggregate_cells(.data, slot = "data", assays = NULL,
+#'   aggregation_function = Matrix::rowSums, .by = NULL, .sample = NULL, ...)
+#'
+#' @param .by Grouping columns (tidyverse-style).
+#' @param .sample \lifecycle{soft-deprecated} Use `.by` instead.
 #'
 #' @references
 #' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
-#' 
-#' @importFrom rlang enquo
-#' @importFrom magrittr "%>%"
-#' @importFrom tibble enframe
+#'
+#' @return A `SummarizedExperiment` object with aggregated assays,
+#'   preserving `rowData` and aggregated `colData`.
+#'
+#' @importFrom rlang as_quosure
+#' @importFrom lifecycle deprecate_soft
 #' @importFrom Matrix rowSums
 #' @importFrom ttservice aggregate_cells
+#' @importFrom SummarizedExperiment SummarizedExperiment
 #' @importFrom SummarizedExperiment assays
-#' @importFrom SummarizedExperiment assays<-
+#' @importFrom SummarizedExperiment assay
 #' @importFrom SummarizedExperiment assayNames
 #' @importFrom SummarizedExperiment rowData
-#' @importFrom SummarizedExperiment rowData<-
-#' @importFrom stringr str_remove
-#' @importFrom dplyr group_split
-#' @importFrom dplyr select
-#' @importFrom tidyr pivot_wider
-#' @importFrom tidyr unite
-#' @importFrom dplyr mutate
-#' @importFrom dplyr pull
-#' @importFrom dplyr left_join
-#' @importFrom tidyr unnest
-#' @importFrom S4Vectors DataFrame
-#' @importFrom methods as
-#'
+#' @importFrom SummarizedExperiment colData
 #'
 setMethod("aggregate_cells", "SingleCellExperiment", function(.data,
     .sample=NULL, slot="data", assays=NULL,
     aggregation_function=Matrix::rowSums,
+    .by=NULL,
     ...) {
 
-    # Fix NOTEs
-    feature <- NULL
-    .feature <- NULL
-    my_id_to_split_by___ <- NULL
-    assay_name <- NULL
-    .sample <- enquo(.sample)
+    # Re-capture NSE arguments from the original call, since S4 dispatch
+    # evaluates arguments before passing to the method body. Walk up the call
+    # stack past the S4 `.local` wrapper to find the actual user call.
+    cl <- sys.call(sys.parent(1L))
+    if (is.null(cl) || !is.call(cl)) cl <- sys.call()
+    cl_names <- names(cl)
 
-    # Subset only wanted assays
-    if (!is.null(assays)) {
-        assays(.data) <- assays(.data)[assays]
+    # Determine which grouping argument was supplied (unevaluated)
+    if (!is.null(cl_names) && ".by" %in% cl_names) {
+        grouping_quo <- rlang::as_quosure(cl[[".by"]], parent.frame())
+    } else if (!is.null(cl_names) && ".sample" %in% cl_names) {
+        lifecycle::deprecate_soft(
+            "1.20.2",
+            "aggregate_cells(.sample=)",
+            "aggregate_cells(.by=)",
+            id = "aggregate_cells-sample-named"
+        )
+        grouping_quo <- rlang::as_quosure(cl[[".sample"]], parent.frame())
+    } else if (length(cl) >= 3L) {
+        # Positional second argument — treat as the deprecated .sample path
+        lifecycle::deprecate_soft(
+            "1.20.2",
+            "aggregate_cells(.sample=)",
+            "aggregate_cells(.by=)",
+            id = "aggregate_cells-sample-positional"
+        )
+        grouping_quo <- rlang::as_quosure(cl[[3L]], parent.frame())
+    } else {
+        stop("`.by` must be specified.", call.=FALSE)
     }
 
+    grouping_cols <- quosure_column_names(grouping_quo)
 
-    grouping_factor =
-      .data |>
-      colData() |>
-      as_tibble() |>
-      select(!!.sample) |>
-      suppressMessages() |>
-      unite("my_id_to_split_by___", !!.sample, sep = "___") |>
-      pull(my_id_to_split_by___) |>
-      as.factor()
+    use_assays <- if (is.null(assays)) assayNames(.data) else assays
+    if (!all(use_assays %in% assayNames(.data))) {
+        stop("assays not found in object", call.=FALSE)
+    }
 
-    list_count_cells = table(grouping_factor) |> as.list()
+    if (!identical(aggregation_function, Matrix::rowSums)) {
+        stop(
+            "Only Matrix::rowSums is supported as aggregation_function.",
+            call.=FALSE
+        )
+    }
 
-    # New method
-    list_assays =
-      .data |>
-      assays() |>
-      as.list() |>
-      map(~ .x |> splitColData(grouping_factor)) |>
-      unlist(recursive=FALSE)
+    ids <- colData(.data)[, grouping_cols, drop=FALSE]
 
-    list_assays =
-      list_assays |>
-      map2(names(list_assays), ~ {
-        # Get counts
-        .x %>%
-          aggregation_function(na.rm=TRUE) %>%
-          enframe(
-            name =".feature",
-            value="x") %>% # sprintf("%s", .y)) %>%
+    check_and_install_packages("scrapper")
 
-          # In case we don't have rownames
-          mutate(.feature=as.character(.feature))
-      }) |>
-      enframe(name = ".sample") |>
+    aggregated_assays <- list()
+    aggregated_col_data <- NULL
 
-      # Clean groups
-      mutate(assay_name = assayNames(!!.data) |> rep(each=length(levels(grouping_factor)))) |>
-      mutate(.sample = .sample |> str_remove(assay_name) |> str_remove("\\.")) |>
-      group_split(.sample) |>
-      map(~ .x |>  unnest(value) |> pivot_wider(names_from = assay_name, values_from = x) ) |>
+    for (i in seq_along(use_assays)) {
+        at <- use_assays[[i]]
+        agg <- scrapper::aggregateAcrossCells.se(
+            .data,
+            factors=ids,
+            assay.type=at,
+            output.prefix="",
+            counts.name=if (i == 1L) "ncells" else NULL
+        )
+        aggregated_assays[[at]] <- assay(agg, "sums")
+        if (i == 1L) {
+            aggregated_col_data <- colData(agg)
+        }
+    }
 
-      # Add cell count
-      map2(
-        list_count_cells,
-        ~ .x |> mutate(.aggregated_cells = .y)
-      )
+    if (anyDuplicated(colnames(aggregated_col_data))) {
+        aggregated_col_data <- aggregated_col_data[, !duplicated(colnames(aggregated_col_data)), drop=FALSE]
+    }
+    if ("ncells" %in% colnames(aggregated_col_data)) {
+        colnames(aggregated_col_data)[colnames(aggregated_col_data) == "ncells"] <- ".aggregated_cells"
+    }
 
-    aggregated_sce = 
-      do.call(rbind, list_assays) |>
-
-        as_SummarizedExperiment(
-            .sample=.sample,
-            .transcript=.feature,
-            .abundance=!!as.symbol(names(.data@assays))
-          )
-    
-    new_col_data = 
-      .data |>
-      colData() |>
-      as_tibble() |>
-      subset(!!.sample) |>
-      unite("my_id_to_split_by___", !!.sample, remove=FALSE, sep = "___") 
-    
-    new_col_data = new_col_data |> DataFrame(row.names = new_col_data$my_id_to_split_by___) |> _[,-1,drop=FALSE]
-    
-    colData(aggregated_sce) = 
-      colData(aggregated_sce) |> 
-      cbind(
-        new_col_data[match(rownames(colData(aggregated_sce)), rownames(new_col_data)),,drop=FALSE]
-      )
-    
-    rowData(aggregated_sce)  = rowData(.data)
-    
-    aggregated_sce
-    
+    SummarizedExperiment::SummarizedExperiment(
+        assays=aggregated_assays,
+        rowData=rowData(.data),
+        colData=aggregated_col_data
+    )
 })

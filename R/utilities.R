@@ -526,3 +526,24 @@ splitColData <- function(x, f) {
 cell__ <- get_special_column_name_symbol(".cell")
 feature__ <- get_special_column_name_symbol(".feature")
 sample__ <- get_special_column_name_symbol(".sample")
+
+check_and_install_packages <- function(packages) {
+    rlang::check_installed(
+        pkg = packages,
+        action = function(...) {
+            if (!requireNamespace("BiocManager", quietly = TRUE)) {
+                install.packages("BiocManager", repos = c("https://cloud.r-project.org"))
+            }
+            BiocManager::install(..., ask = FALSE, update = FALSE)
+        }
+    )
+}
+
+quosure_column_names <- function(q) {
+    expr <- rlang::quo_get_expr(q)
+    if (is.call(expr) && identical(expr[[1L]], quote(c))) {
+        as.character(expr[-1L])
+    } else {
+        rlang::quo_name(q)
+    }
+}

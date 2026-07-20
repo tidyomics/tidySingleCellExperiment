@@ -5,19 +5,13 @@
 \alias{aggregate_cells,SingleCellExperiment-method}
 \title{Aggregate cells}
 \usage{
-\S4method{aggregate_cells}{SingleCellExperiment}(
-  .data,
-  .sample = NULL,
-  slot = "data",
-  assays = NULL,
-  aggregation_function = Matrix::rowSums,
-  ...
-)
+aggregate_cells(.data, slot = "data", assays = NULL,
+  aggregation_function = Matrix::rowSums, .by = NULL, .sample = NULL, ...)
 }
 \arguments{
 \item{.data}{A tidySingleCellExperiment object}
 
-\item{.sample}{A vector of variables by which cells are aggregated}
+\item{.sample}{\lifecycle{soft-deprecated} Use `.by` instead.}
 
 \item{slot}{The slot to which the function is applied}
 
@@ -25,10 +19,13 @@
 
 \item{aggregation_function}{The method of cell-feature value aggregation}
 
+\item{.by}{Grouping columns (tidyverse-style).}
+
 \item{...}{Used for future extendibility}
 }
 \value{
-A tibble object
+A `SummarizedExperiment` object with aggregated assays,
+  preserving `rowData` and aggregated `colData`.
 }
 \description{
 Combine cells into groups based on shared variables and aggregate feature counts.
@@ -36,7 +33,7 @@ Combine cells into groups based on shared variables and aggregate feature counts
 \examples{
 data(pbmc_small)
 pbmc_small_pseudo_bulk <- pbmc_small |>
-  aggregate_cells(c(groups, ident), assays="counts")
+  aggregate_cells(.by = c(groups, ident), assays = "counts")
 
 }
 \references{

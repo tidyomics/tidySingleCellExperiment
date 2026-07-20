@@ -46,10 +46,11 @@ test_that("aggregate_cells()", {
     df$factor <- sample(gl(3, 1, ncol(df)))
     df$string <- sample(c("a", "b"), ncol(df), TRUE)
     tbl <- distinct(select(df, factor, string))
-    fd <- aggregate_cells(df, c(factor, string))
+
+    # .by is the preferred API
+    fd <- aggregate_cells(df, .by = c(factor, string))
     expect_identical(assayNames(fd), assayNames(df))
-    # [HLC: aggregate_cells() currently
-    # reorders features alphabetically]
+    # [HLC: aggregate_cells() currently reorders features alphabetically]
     fd <- fd[rownames(df), ]
     expect_s4_class(fd, "SummarizedExperiment")
     expect_equal(dim(fd), c(nrow(df), nrow(tbl)))
@@ -58,14 +59,29 @@ test_that("aggregate_cells()", {
         s=tbl$string,
         \(f, s) {
             expect_identical(
-                df |> 
+                df |>
                     filter(factor == f, string == s) |>
                     assay() |> rowSums() |> as.vector(),
                 fd[, fd$factor == f & fd$string == s] |>
                     assay() |> as.vector())
         })
+
     # specified 'assays' are subsetted
-    expect_error(aggregate_cells(df, c(factor, string), assays="x"))
-    fd <- aggregate_cells(df, c(factor, string), assays="counts")
+    expect_error(aggregate_cells(df, .by = c(factor, string), assays="x"))
+    fd <- aggregate_cells(df, .by = c(factor, string), assays="counts")
     expect_identical(assayNames(fd), "counts")
+    expect_true(all(c("factor", "string") %in% colnames(colData(fd))))
+    expect_true(".aggregated_cells" %in% colnames(colData(fd)))
+    expect_gt(ncol(rowData(fd)), 0L)
+    expect_identical(rownames(rowData(fd)), rownames(rowData(df)))
+
+    # .sample is soft-deprecated — still works but warns
+    expect_warning(
+        aggregate_cells(df, c(factor, string)),
+        regexp="deprecated"
+    )
+    expect_warning(
+        aggregate_cells(df, .sample = c(factor, string)),
+        regexp="deprecated"
+    )
 })
