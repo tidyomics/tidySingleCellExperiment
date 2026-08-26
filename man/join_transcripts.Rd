@@ -9,7 +9,7 @@ join_transcripts(
   transcripts = NULL,
   all = FALSE,
   exclude_zeros = FALSE,
-  shape = "long",
+  shape = "wide",
   ...
 )
 }
@@ -40,4 +40,7 @@ DEPRECATED, please use join_features()
 print("DEPRECATED")
 
 
+}
+\references{
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
 }

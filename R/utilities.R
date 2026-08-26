@@ -1,6 +1,5 @@
 #' @importFrom tibble as_tibble
 #' @importFrom SummarizedExperiment colData
-#' @importFrom MASS rnegbin
 #'
 #' @keywords internal
 #'
@@ -8,45 +7,44 @@
 #'
 #' @noRd
 to_tib <- function(.data) {
-  colData(.data) %>%
-    as.data.frame() %>%
-    as_tibble(rownames=c_(.data)$name)
+    colData(.data) %>%
+        as.data.frame() %>%
+        as_tibble(rownames=c_(.data)$name)
 }
 
 # Greater than
 gt <- function(a, b) {
-  a > b
+    a > b
 }
 
 # Smaller than
 st <- function(a, b) {
-  a < b
+    a < b
 }
 
 # Negation
 not <- function(is) {
-  !is
+    !is
 }
 
 # Raise to the power
 pow <- function(a, b) {
-  a^b
+    a^b
 }
 
 # Equals
 eq <- function(a, b) {
-  a == b
+    a == b
 }
 
 prepend <- function(x, values, before=1) {
-  n <- length(x)
-  stopifnot(before > 0 && before <= n)
-  if (before == 1) {
-    c(values, x)
-  }
-  else {
-    c(x[seq_len(before - 1)], values, x[before:n])
-  }
+    n <- length(x)
+    stopifnot(before > 0 && before <= n)
+    if (before == 1) {
+        c(values, x)
+    } else {
+        c(x[seq_len(before - 1)], values, x[before:n])
+    }
 }
 #' Add class to abject
 #'
@@ -72,47 +70,57 @@ add_class <- function(var, name) {
 #' @return A tibble with an additional attribute
 #' @keywords internal
 drop_class <- function(var, name) {
-  class(var) <- class(var)[!class(var) %in% name]
-  var
+    class(var) <- class(var)[!class(var) %in% name]
+    var
+}
+
+# Resolve assay/assays from join_features dots
+.assays_from_dots <- function(.data, ..., default_last=FALSE) {
+    dots <- list(...)
+    assays_to_use <- dots$assays
+    if (is.null(assays_to_use)) assays_to_use <- dots$assay
+    if (is.null(assays_to_use) && isTRUE(default_last)) {
+        assays_to_use <- rev(assayNames(.data))[1]
+    }
+    assays_to_use
 }
 
 # Get assays
 get_all_assays <- function(x) {
-  assay_names <- names(assays(x))
-  alt_exp_assays <- list()
-  alt_exp_assay_names_list <- lapply(altExps(x), assayNames)
-  names(assay_names) <- rep("RNA", length(assay_names))
-  # Include altExp assays if they exist
-  if(length(altExps(x)) > 0) {
-    alt_exp_assay_names_df <- stack(alt_exp_assay_names_list)
-    alt_exp_assay_names <- paste(alt_exp_assay_names_df$ind, alt_exp_assay_names_df$values, sep = "-")
-    names(alt_exp_assay_names) <- alt_exp_assay_names_df$ind
-  } else {
-    alt_exp_assay_names_df <- NULL
-    alt_exp_assay_names <- NULL
-  }
+    assay_names <- names(assays(x))
+    alt_exp_assay_names_list <- lapply(altExps(x), assayNames)
+    names(assay_names) <- rep("RNA", length(assay_names))
+    # Include altExp assays if they exist
+    if (length(altExps(x)) > 0) {
+        alt_exp_assay_names_df <- stack(alt_exp_assay_names_list)
+        alt_exp_assay_names <- paste(
+            alt_exp_assay_names_df$ind, alt_exp_assay_names_df$values, sep="-")
+        names(alt_exp_assay_names) <- alt_exp_assay_names_df$ind
+    } else {
+        alt_exp_assay_names_df <- NULL
+        alt_exp_assay_names <- NULL
+    }
 
-  all_assay_names_df <- rbind(stack(assay_names), alt_exp_assay_names_df)
-  all_assay_names <- c(assay_names, alt_exp_assay_names)
-  all_assay_names_ext_df <- stack(all_assay_names)
-  all_assay_names_ext_df <- cbind(all_assay_names_ext_df, all_assay_names_df$values)
-  colnames(all_assay_names_ext_df) <- c("assay_id", "exp_id", "assay_name")
-  return(all_assay_names_ext_df)
+    all_assay_names_df <- rbind(stack(assay_names), alt_exp_assay_names_df)
+    all_assay_names <- c(assay_names, alt_exp_assay_names)
+    all_assay_names_ext_df <- stack(all_assay_names)
+    all_assay_names_ext_df <- cbind(all_assay_names_ext_df, all_assay_names_df$values)
+    colnames(all_assay_names_ext_df) <- c("assay_id", "exp_id", "assay_name")
+    return(all_assay_names_ext_df)
 }
 
 # Get list of features
 get_all_features <- function(x) {
-  all_assay_names_ext_df <- get_all_assays(x)
-  features_lookup <- vector("list", length = length(all_assay_names_ext_df$assay_id))
-  RNA_features <- vector("list", length = 1)
-  names(RNA_features) <- "RNA"
-  RNA_features[["RNA"]] <- rownames(rowData(x))
-  temp_funct <- function(x) rownames(rowData(x))
-  alt_exp_features <- lapply(altExps(x), temp_funct)
-  feature_df <- stack(c(RNA_features, alt_exp_features))
-  colnames(feature_df) <- c("feature", "exp_id")
-  feature_df <- merge(feature_df, all_assay_names_ext_df, by = "exp_id")
-  return(feature_df)
+    all_assay_names_ext_df <- get_all_assays(x)
+    RNA_features <- vector("list", length=1)
+    names(RNA_features) <- "RNA"
+    RNA_features[["RNA"]] <- rownames(rowData(x))
+    temp_funct <- function(x) rownames(rowData(x))
+    alt_exp_features <- lapply(altExps(x), temp_funct)
+    feature_df <- stack(c(RNA_features, alt_exp_features))
+    colnames(feature_df) <- c("feature", "exp_id")
+    feature_df <- merge(feature_df, all_assay_names_ext_df, by="exp_id")
+    return(feature_df)
 }
 
 #' get abundance wide
@@ -135,85 +143,101 @@ get_all_features <- function(x) {
 #' @return A tidySingleCellExperiment object
 #'
 #' @noRd
-get_abundance_sc_wide <- function(.data, features=NULL, all=FALSE, prefix="", variable_features = NA, ...) {
+get_abundance_sc_wide <- function(.data, features=NULL, all=FALSE,
+    prefix="", variable_features=NA, ...) {
 
-  arg_list <- c(mget(ls(environment(), sorted=F)), match.call(expand.dots=F)$...)
-  assays_to_use <- eval(arg_list$assays)
-  if(is.null(assays_to_use)) stop("Please provide one assay name when joining in wide format")
-  if(length(assays_to_use) > 1) stop("Please provide one assay name when joining in wide format")
+    assays_to_use <- .assays_from_dots(.data, ..., default_last=TRUE)
+    if (length(assays_to_use) > 1)
+        stop("Please provide one assay name when joining in wide format")
 
-  # Solve CRAN warnings
-  . <- NULL
+    # Solve CRAN warnings
+    . <- NULL
 
-  # For SCE there is no a priori field for variable features
-  # If variable_features are selected set all to FALSE. They can only be on or the other.
-  if(!all(is.na(variable_features))) all <- FALSE
+    # For SCE there is no a priori field for variable features
+    # If variable_features are selected set all to FALSE. They can only be one or the other.
+    if (!all(is.na(variable_features))) all <- FALSE
 
-  # Give options if no arguments are selected
-  if (isFALSE(all) && is.null(features)) {
-    if (all(is.na(variable_features))) {
-      stop("Your object does not contain variable feature labels,\n",
-           "The features argument is empty and all arguments are set to FALSE.\n",
-           " Either:\n",
-           " 1. use scran::getTopHVGs() to select variable features\n",
-           " 2. pass an array of feature names to `variable_features`\n",
-           " 3. set all=TRUE (this will output a very large object;",
-           " does your computer have enough RAM?)")
-    } else {
-      # Get variable features if existing
-      variable_genes <- variable_features
-    }
-  } else {
     variable_genes <- NULL
-  }
-
-  if (!is.null(variable_genes)) {
-    gs <- variable_genes
-  } else if (!is.null(features)) {
-    gs <- features
-  }
-  # Get selected features and assays
-  feature_df <- get_all_features(.data)
-  # If all = TRUE then gs are all features in the selected assays, otherwise just the selected features.
-  if(isTRUE(all)) gs <- feature_df[feature_df$assay_name %in% assays_to_use, "feature"]
-  selected_features <- feature_df[(feature_df$feature %in% gs), ]
-  # Subset by selected assay
-  selected_features <- selected_features[selected_features$assay_name %in% assays_to_use,]
-  # If the name of the selected assay is wrong the function will throw an error. Stop before this happens.
-  if(!is.null(features) & nrow(selected_features) == 0) stop("Please provide matched feature and assay names")
-  # Split by experiment
-  selected_experiments_list <- split(x = selected_features, f = as.character(selected_features$exp_id))
-  if("RNA" %in% names(selected_experiments_list)) selected_experiments_list <- selected_experiments_list[c("RNA", setdiff(names(selected_experiments_list), "RNA"))]
-  extract_feature_values <- function(exp) {
-    selected_features_exp <- as.character(unique(exp$exp_id))
-    selected_features_assay <- as.character(unique(exp$assay_name))
-    selected_features_assay_names <- as.character(unique(exp$assay_id))
-    # Assay slots for the main "RNA" experiment and the altExps are treated differently and need to be run separately
-    if(selected_features_exp == "RNA") {
-      selected_features_from_exp <- rownames(assay(.data, selected_features_assay_names))[(rownames(assay(.data, selected_features_assay_names)) %in% gs)]
-      mtx <- assay(.data, selected_features_assay_names)[selected_features_from_exp,]
-      if(is.null(dim(mtx))) mtx <- matrix(mtx, byrow = TRUE, nrow = 1, ncol = length(mtx))
-      mtx %>%
-        `colnames<-`(colnames(.data)) %>%
-        as.matrix() %>% t() %>%
-        as_tibble(rownames=c_(.data)$name, .name_repair = "minimal") %>%
-        setNames(c(c_(.data)$name, sprintf("%s%s", prefix, selected_features_from_exp)))
-    } else {
-      selected_features_from_exp <- rownames(altExps(.data)[[selected_features_exp]])[(rownames(altExps(.data)[[selected_features_exp]]) %in% gs)]
-      mtx <- assay(altExps(.data)[[selected_features_exp]], selected_features_assay)[selected_features_from_exp,]
-      if(is.null(dim(mtx))) mtx <- matrix(mtx, byrow = TRUE, nrow = 1, ncol = length(mtx))
-      mtx %>%
-        `colnames<-`(colnames(.data)) %>%
-        as.matrix() %>% t() %>%
-        as_tibble(rownames=c_(.data)$name, .name_repair = "minimal") %>%
-        setNames(c(c_(.data)$name, sprintf("%s%s", prefix, selected_features_from_exp)))
+    if (isFALSE(all) && is.null(features)) {
+        if (all(is.na(variable_features))) {
+            stop("Your object does not contain variable feature labels,\n",
+                "The features argument is empty and all arguments are set to FALSE.\n",
+                " Either:\n",
+                " 1. use scran::getTopHVGs() to select variable features\n",
+                " 2. pass an array of feature names to `variable_features`\n",
+                " 3. set all=TRUE (this will output a very large object;",
+                " does your computer have enough RAM?)")
+        } else {
+            variable_genes <- variable_features
+        }
     }
-  }
-  # Apply function that extracts feature values and join for all selected assays
-  suppressMessages({
-    feature_values_list <- lapply(selected_experiments_list, extract_feature_values)
-    purrr::reduce(feature_values_list, dplyr::full_join, by = dplyr::join_by(.cell), suffix = paste0(".", names(feature_values_list)))
-  })
+
+    gs <- NULL
+    if (!is.null(variable_genes)) {
+        gs <- variable_genes
+    } else if (!is.null(features)) {
+        gs <- features
+    }
+
+    # Get selected features and assays
+    feature_df <- get_all_features(.data)
+    # If all = TRUE then gs are all features in the selected assays
+    if (isTRUE(all))
+        gs <- feature_df[feature_df$assay_name %in% assays_to_use, "feature"]
+    selected_features <- feature_df[(feature_df$feature %in% gs), ]
+    # Subset by selected assay
+    selected_features <- selected_features[selected_features$assay_name %in% assays_to_use, ]
+    # If the name of the selected assay is wrong the function will throw an error. Stop before this happens.
+    if (!is.null(features) && nrow(selected_features) == 0)
+        stop("Please provide matched feature and assay names")
+    # Split by experiment
+    selected_experiments_list <- split(
+        x=selected_features, f=as.character(selected_features$exp_id))
+    if ("RNA" %in% names(selected_experiments_list))
+        selected_experiments_list <- selected_experiments_list[
+            c("RNA", setdiff(names(selected_experiments_list), "RNA"))]
+
+    extract_feature_values <- function(exp) {
+        selected_features_exp <- as.character(unique(exp$exp_id))
+        selected_features_assay <- as.character(unique(exp$assay_name))
+        selected_features_assay_names <- as.character(unique(exp$assay_id))
+        # Assay slots for the main "RNA" experiment and the altExps are treated differently
+        if (selected_features_exp == "RNA") {
+            selected_features_from_exp <- rownames(
+                assay(.data, selected_features_assay_names))[
+                    rownames(assay(.data, selected_features_assay_names)) %in% gs]
+            mtx <- assay(.data, selected_features_assay_names)[selected_features_from_exp, ]
+            if (is.null(dim(mtx)))
+                mtx <- matrix(mtx, byrow=TRUE, nrow=1, ncol=length(mtx))
+            mtx %>%
+                `colnames<-`(colnames(.data)) %>%
+                as.matrix() %>% t() %>%
+                as_tibble(rownames=c_(.data)$name, .name_repair="minimal") %>%
+                setNames(c(c_(.data)$name, sprintf("%s%s", prefix, selected_features_from_exp)))
+        } else {
+            selected_features_from_exp <- rownames(
+                altExps(.data)[[selected_features_exp]])[
+                    rownames(altExps(.data)[[selected_features_exp]]) %in% gs]
+            mtx <- assay(
+                altExps(.data)[[selected_features_exp]],
+                selected_features_assay)[selected_features_from_exp, ]
+            if (is.null(dim(mtx)))
+                mtx <- matrix(mtx, byrow=TRUE, nrow=1, ncol=length(mtx))
+            mtx %>%
+                `colnames<-`(colnames(.data)) %>%
+                as.matrix() %>% t() %>%
+                as_tibble(rownames=c_(.data)$name, .name_repair="minimal") %>%
+                setNames(c(c_(.data)$name, sprintf("%s%s", prefix, selected_features_from_exp)))
+        }
+    }
+    # Apply function that extracts feature values and join for all selected assays
+    suppressMessages({
+        feature_values_list <- lapply(selected_experiments_list, extract_feature_values)
+        purrr::reduce(
+            feature_values_list, dplyr::full_join,
+            by=dplyr::join_by(.cell),
+            suffix=paste0(".", names(feature_values_list)))
+    })
 }
 
 #' get abundance long
@@ -236,115 +260,113 @@ get_abundance_sc_wide <- function(.data, features=NULL, all=FALSE, prefix="", va
 #' @return A tidySingleCellExperiment object
 #'
 #' @noRd
-get_abundance_sc_long <- function(.data, features = NULL, all = FALSE, exclude_zeros = FALSE, variable_features = NA, ...) {
+get_abundance_sc_long <- function(.data, features=NULL, all=FALSE,
+    exclude_zeros=FALSE, variable_features=NA, ...) {
 
-  arg_list <- c(mget(ls(environment(), sorted=F)), match.call(expand.dots=F)$...)
-  assays_to_use <- eval(arg_list$assays)
+    assays_to_use <- .assays_from_dots(.data, ...)
 
-  # Solve CRAN warnings
-  . <- NULL
+    # Solve CRAN warnings
+    . <- NULL
 
-  # Check if output would be too big without forcing
-  if (isFALSE(all) && is.null(features)) {
-    if (all(is.na(variable_features))) {
-      stop("Your object does not contain variable feature labels,\n",
-           "The features argument is empty and all arguments are set to FALSE.\n",
-           " Either:\n",
-           " 1. use scran::getTopHVGs() to select variable features\n",
-           " 2. pass an array of feature names to `variable_features`\n",
-           " 3. set all=TRUE (this will output a very large object;",
-           " does your computer have enough RAM?)")
-    } else {
-      # Get variable features if existing
-      variable_genes <- variable_features
-      features <- variable_features
-    }
-  } else {
     variable_genes <- NULL
-  }
-
-  # Check that I have assay names
-  if (!length(assayNames(.data))) {
-    stop("tidySingleCellExperiment says:",
-         " there are no assay names in the",
-         " source SingleCellExperiment.")
-  }
-
-  if (!is.null(variable_genes)) {
-    gs <- variable_genes
-  } else if (!is.null(features)){
-    gs <- features
-  } else if(is.null(gs) && isTRUE(gs)) {
-    gs <- unique(feature_df$feature)
-  } else {
-    stop("It is not convenient to extract all genes.",
-         " You should have either variable features,",
-         " or a feature list to extract.")
-  }
-
-  # Get assays
-  all_assay_names_ext_df <- get_all_assays(.data)
-
-  # Get list of features
-  feature_df <- get_all_features(.data)
-
-  # Get selected features - if all = TRUE then all features in the objects are selected
-  selected_features <- feature_df[(feature_df$feature %in% gs), ]
-  if(!is.null(assays_to_use)) selected_features <- selected_features[selected_features$assay_name %in% assays_to_use,]
-  selected_features_exp <- unique(selected_features$exp_id)
-  selected_experiments_list <- split(x = selected_features, f = as.character(selected_features$exp_id))
-  if("RNA" %in% selected_features_exp) selected_experiments_list <- selected_experiments_list[c("RNA", setdiff(names(selected_experiments_list), "RNA"))]
-
-  extract_feature_values <- function(exp) {
-    selected_exp <- unique(exp$exp_id)
-    # Assay slots for the main "RNA" experiment and the altExps are treated differently and need to be run separately
-    if (selected_exp == "RNA") {
-      assays(.data) %>%
-        as.list() %>%
-        .[unique(exp$assay_name)] %>%
-        purrr::map2(unique(exp$assay_id), ~ {
-          # Subset specified features
-          .x <- .x[unique(exp$feature), , drop=FALSE]
-          # Replace 0 with NA
-          if (isTRUE(exclude_zeros))
-            .x[.x == 0] <- NA
-          .x %>%
-            as.matrix() %>%
-            data.frame(check.names=FALSE) %>%
-            as_tibble(rownames=".feature") %>%
-            tidyr::pivot_longer(
-              cols=-.feature,
-              names_to=c_(.data)$name,
-              values_to=".abundance" %>% paste(.y, sep="_"),
-              values_drop_na=TRUE)
-        }) %>% Reduce(function(...) full_join(...,
-                                              by=c(".feature", c_(.data)$name)), .)
-    } else {
-      assays(altExps(.data)[[unique(exp$exp_id)]]) %>%
-        as.list() %>%
-        .[unique(exp$assay_name)] %>%
-        purrr::map2(unique(exp$assay_id), ~ {
-          # Subset specified features
-          .x <- .x[unique(exp$feature), , drop=FALSE]
-          # Replace 0 with NA
-          if (isTRUE(exclude_zeros))
-            .x[.x == 0] <- NA
-          .x %>%
-            as.matrix() %>%
-            data.frame(check.names=FALSE) %>%
-            as_tibble(rownames=".feature") %>%
-            tidyr::pivot_longer(
-              cols=-.feature,
-              names_to=c_(.data)$name,
-              values_to=".abundance" %>% paste(.y, sep="_"),
-              values_drop_na=TRUE)
-        }) %>% Reduce(function(...) full_join(...,
-                                              by=c(".feature", c_(.data)$name)), .)
+    if (isFALSE(all) && is.null(features)) {
+        if (all(is.na(variable_features))) {
+            stop("Your object does not contain variable feature labels,\n",
+                "The features argument is empty and all arguments are set to FALSE.\n",
+                " Either:\n",
+                " 1. use scran::getTopHVGs() to select variable features\n",
+                " 2. pass an array of feature names to `variable_features`\n",
+                " 3. set all=TRUE (this will output a very large object;",
+                " does your computer have enough RAM?)")
+        } else {
+            variable_genes <- variable_features
+            features <- variable_features
+        }
     }
-  }
-  # Apply function that extracts feature values and bind_rows for all selected assays
-  lapply(selected_experiments_list, extract_feature_values) |>
-    bind_rows()
+
+    # Check that I have assay names
+    if (!length(assayNames(.data))) {
+        stop("tidySingleCellExperiment says:",
+            " there are no assay names in the",
+            " source SingleCellExperiment.")
+    }
+
+    # Get list of features first so all=TRUE can use it
+    feature_df <- get_all_features(.data)
+
+    if (!is.null(variable_genes)) {
+        gs <- variable_genes
+    } else if (!is.null(features)) {
+        gs <- features
+    } else if (isTRUE(all)) {
+        gs <- unique(feature_df$feature)
+    } else {
+        stop("It is not convenient to extract all genes.",
+            " You should have either variable features,",
+            " or a feature list to extract.")
+    }
+
+    # Get selected features - if all = TRUE then all features in the objects are selected
+    selected_features <- feature_df[(feature_df$feature %in% gs), ]
+    if (!is.null(assays_to_use))
+        selected_features <- selected_features[selected_features$assay_name %in% assays_to_use, ]
+    selected_features_exp <- unique(selected_features$exp_id)
+    selected_experiments_list <- split(
+        x=selected_features, f=as.character(selected_features$exp_id))
+    if ("RNA" %in% selected_features_exp)
+        selected_experiments_list <- selected_experiments_list[
+            c("RNA", setdiff(names(selected_experiments_list), "RNA"))]
+
+    extract_feature_values <- function(exp) {
+        selected_exp <- unique(exp$exp_id)
+        # Assay slots for the main "RNA" experiment and the altExps are treated differently
+        if (selected_exp == "RNA") {
+            assays(.data) %>%
+                as.list() %>%
+                .[unique(exp$assay_name)] %>%
+                purrr::map2(unique(exp$assay_id), ~ {
+                    # Subset specified features
+                    .x <- .x[unique(exp$feature), , drop=FALSE]
+                    # Replace 0 with NA
+                    if (isTRUE(exclude_zeros))
+                        .x[.x == 0] <- NA
+                    .x %>%
+                        as.matrix() %>%
+                        data.frame(check.names=FALSE) %>%
+                        as_tibble(rownames=".feature") %>%
+                        tidyr::pivot_longer(
+                            cols=-.feature,
+                            names_to=c_(.data)$name,
+                            values_to=".abundance" %>% paste(.y, sep="_"),
+                            values_drop_na=TRUE)
+                }) %>% Reduce(function(...) full_join(...,
+                    by=c(".feature", c_(.data)$name)), .)
+        } else {
+            assays(altExps(.data)[[unique(exp$exp_id)]]) %>%
+                as.list() %>%
+                .[unique(exp$assay_name)] %>%
+                purrr::map2(unique(exp$assay_id), ~ {
+                    # Subset specified features
+                    .x <- .x[unique(exp$feature), , drop=FALSE]
+                    # Replace 0 with NA
+                    if (isTRUE(exclude_zeros))
+                        .x[.x == 0] <- NA
+                    .x %>%
+                        as.matrix() %>%
+                        data.frame(check.names=FALSE) %>%
+                        as_tibble(rownames=".feature") %>%
+                        tidyr::pivot_longer(
+                            cols=-.feature,
+                            names_to=c_(.data)$name,
+                            values_to=".abundance" %>% paste(.y, sep="_"),
+                            values_drop_na=TRUE)
+                }) %>% Reduce(function(...) full_join(...,
+                    by=c(".feature", c_(.data)$name)), .)
+        }
+    }
+    # Apply function that extracts feature values and bind_rows for all selected assays
+    lapply(selected_experiments_list, extract_feature_values) |>
+        bind_rows()
 }
 
 #' @importFrom dplyr select any_of
@@ -387,10 +409,10 @@ as_meta_data <- function(.data, SingleCellExperiment_object) {
 #'
 #' @noRd
 get_special_columns <- function(SingleCellExperiment_object) {
-  get_special_datasets(SingleCellExperiment_object) %>%
-    map(~ .x %>% colnames()) %>%
-    unlist() %>%
-    as.character()
+    get_special_datasets(SingleCellExperiment_object) %>%
+        map(~ .x %>% colnames()) %>%
+        unlist() %>%
+        as.character()
 }
 
 #' @importFrom SingleCellExperiment reducedDims
@@ -424,10 +446,10 @@ get_needed_columns <- function(.data) {
 #'
 #' @return A character vector
 quo_names <- function(v) {
-  v <- quo_name(quo_squash(v))
-  gsub("^c\\(|`|\\)$", "", v) %>%
-    strsplit(", ") %>%
-    unlist()
+    v <- quo_name(quo_squash(v))
+    gsub("^c\\(|`|\\)$", "", v) %>%
+        strsplit(", ") %>%
+        unlist()
 }
 
 #' returns variables from an expression
@@ -436,7 +458,7 @@ quo_names <- function(v) {
 #' @return list of symbols
 return_arguments_of <- function(expression){
     variables <- enexpr(expression) |> as.list()
-    if(length(variables) > 1) {
+    if (length(variables) > 1) {
         variables <- variables[-1] # removes first element which is function
     }
     variables
@@ -462,9 +484,10 @@ duplicated_cell_names <- paste(
 # Check if "sample" is included in the query and is not part of any other existing annotation
 #' @importFrom stringr str_detect
 #' @importFrom stringr regex
-
-is_sample_feature_deprecated_used <- function(.data,
-    user_columns, use_old_special_names=FALSE) {
+is_sample_feature_deprecated_used <- function(
+    .data,
+    user_columns, use_old_special_names=FALSE
+  ) {
 
     cell <- user_columns |> as.character() |>  str_detect(regex("\\bcell\\b")) |>  any()
     .cell <- user_columns |> as.character() |> str_detect(regex("\\W*(\\.cell)\\W*")) |> any()
@@ -492,7 +515,6 @@ get_special_column_name_symbol <- function(name) {
 # Key column names
 #' @importFrom S4Vectors metadata
 #' @importFrom S4Vectors metadata<-
-
 ping_old_special_column_into_metadata <- function(.data) {
     metadata(.data)$cell__ <- get_special_column_name_symbol("cell")
     return(.data)
@@ -560,8 +582,12 @@ trick_to_avoid_renaming_of_already_unique_columns_by_dplyr <- function(x) {
 #' @importFrom rlang enquo
 #' @importFrom purrr map
 #' @importFrom dplyr distinct_at
-#' @importFrom magrittr equals
 #' @importFrom dplyr vars
+#' @importFrom dplyr select
+#' @importFrom dplyr pull
+#' @importFrom tidyr unite
+#' @importFrom magrittr equals
+#' @importFrom tidyselect all_of
 #'
 #' @param .data A tibble
 #' @param .col A vector of column names
@@ -607,16 +633,15 @@ get_specific_annotation_columns <- function(.data, .col) {
 #' @param .column A vector of column names
 #'
 #' @return A tibble
-
 subset <- function(.data, .column)	{
 
     # Make col names
     .column <- enquo(.column)
 
     # Check if column present
-    if (!all(quo_names(.column) %in% colnames(.data)))
-        stop("nanny says: some of the .column specified",
-            " do not exist in the input data frame.")
+    if (.data |> select(!!.column) |> colnames() %in% colnames(.data) %>% all %>% `!`)
+      stop("tidySingleCellExperiment says: some of the .column specified",
+           " do not exist in the input data frame.")
 
     .data |>
         # Selecting the right columns
@@ -635,11 +660,13 @@ splitColData <- function(x, f) {
 
   names(v) <- names(i)
 
-  for (n in names(i)) { v[[n]] <- x[, i[[n]]] }
+  for (n in names(i)) { v[[n]] <- x[, i[[n]], drop=FALSE ] }
 
   return(v)
 
 }
+
+
 
 cell__ <- get_special_column_name_symbol(".cell")
 feature__ <- get_special_column_name_symbol(".feature")

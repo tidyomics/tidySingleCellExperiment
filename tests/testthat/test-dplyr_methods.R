@@ -57,15 +57,15 @@ df$factor <- sample(
 #     expect_identical(fd, df)
 # })
 
-test_that("bind_rows()", {
+test_that("append_samples()", {
     # warn about duplicated cells names
-    expect_warning(fd <- bind_rows(df, df))
+    expect_warning(fd <- append_samples(df, df))
     # cell names should be unique after binding
     expect_true(!any(duplicated(pull(fd, .cell))))
 })
 
 test_that("bind_cols()", {
-    fd <- bind_cols(df, select(df, factor))
+    fd <- ttservice::bind_cols(df, select(df, factor))
     i <- grep("^factor", names(colData(fd)))
     expect_length(i, 2)
     expect_identical(fd[[i[1]]], df$factor)
@@ -255,6 +255,17 @@ test_that("full_join(), with DataFrame y", {
     # expect_identical(
     #     select(fd, -other),
     #     mutate(df, factor=paste(factor)))
+})
+
+test_that("anti_join()", {
+  y <- df |> 
+    distinct(factor) |> 
+    mutate(string=letters[seq(nlevels(df$factor))]) |> 
+    filter(factor !="g1")
+  fd <- anti_join(df, y, by="factor")
+  expect_s4_class(fd, "SingleCellExperiment")
+  expect_equal(n <- ncol(colData(fd)), ncol(colData(df)))
+  expect_lt(ncol(fd), ncol(df))
 })
 
 test_that("slice()", {

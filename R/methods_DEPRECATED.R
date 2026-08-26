@@ -3,6 +3,9 @@
 #'
 #' @description join_transcripts() extracts and joins information for specified transcripts
 #'
+#' @references
+#' Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+#' 
 #' @importFrom rlang enquo
 #' @importFrom magrittr "%>%"
 #'
@@ -32,7 +35,7 @@ join_transcripts <-
     transcripts=NULL,
     all=FALSE,
     exclude_zeros=FALSE,
-    shape="long", ...)
+    shape="wide", ...)
     {
         UseMethod("join_transcripts", .data)
     }
@@ -42,7 +45,7 @@ join_transcripts.default <-
         transcripts=NULL,
         all=FALSE,
         exclude_zeros=FALSE,
-        shape="long", ...)
+        shape="wide", ...)
     {
         print("tidySingleCellExperiment says:",
             " This function cannot be applied to this object")
@@ -53,7 +56,7 @@ join_transcripts.Seurat <-
         transcripts=NULL,
         all=FALSE,
         exclude_zeros=FALSE,
-        shape="long", ...)
+        shape="wide", ...)
     {
         deprecate_warn(
             "1.1.2", "join_transcripts()", 

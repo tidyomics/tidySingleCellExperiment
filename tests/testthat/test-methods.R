@@ -68,6 +68,15 @@ test_that("show()", {
 )
 
 test_that("join_features()", {
+  # RNA-only, wide is the default
+  gs_rna <- sample(rownames(df), 3)
+  fd <- join_features(df, gs_rna, assay="counts")
+  expect_s4_class(fd, "SingleCellExperiment")
+  expect_null(fd$.feature)
+  expect_identical(
+      unname(t(as.matrix(as_tibble(fd)[, make.names(gs_rna)]))),
+      as.matrix(unname(counts(df)[gs_rna, ])))
+
   gs <- c(sample(rownames(df), 3), sample(rownames(altExps(df)[[1]]), 3))
   sce_counts_combined <- do.call("rbind", append(lapply(altExps(df), counts), values = list(as.matrix(counts(df))), after = 0))
   # long

@@ -68,16 +68,16 @@ yield different results on grouped tibbles. This will be the case
 as soon as an aggregating, lagging, or ranking function is
 involved. Compare this ungrouped mutate:
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{starwars \%>\%
-  select(name, mass, species) \%>\%
+\if{html}{\out{<div class="sourceCode">}}\preformatted{starwars |>
+  select(name, mass, species) |>
   mutate(mass_norm = mass / mean(mass, na.rm = TRUE))
 }\if{html}{\out{</div>}}
 
 With the grouped equivalent:
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{starwars \%>\%
-  select(name, mass, species) \%>\%
-  group_by(species) \%>\%
+\if{html}{\out{<div class="sourceCode">}}\preformatted{starwars |>
+  select(name, mass, species) |>
+  group_by(species) |>
   mutate(mass_norm = mass / mean(mass, na.rm = TRUE))
 }\if{html}{\out{</div>}}
 
@@ -103,11 +103,16 @@ data(pbmc_small)
 pbmc_small |> mutate(nFeature_RNA=1)
 
 }
+\references{
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
+}
 \seealso{
-Other single table verbs: 
-\code{\link{arrange}()},
-\code{\link{rename}()},
-\code{\link{slice}()},
-\code{\link{summarise}()}
+Other single table verbs:
+\code{\link{arrange}},
+\code{\link{rename}},
+\code{\link{slice}},
+\code{\link{summarise}}
 }
 \concept{single table verbs}

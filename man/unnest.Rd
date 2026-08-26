@@ -43,11 +43,11 @@ When selecting multiple columns, values from the same row will be recycled
 to their common size.}
 
 \item{...}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}:
-previously you could write \code{df \%>\% unnest(x, y, z)}.
-Convert to \code{df \%>\% unnest(c(x, y, z))}. If you previously created a new
+previously you could write \code{df |> unnest(x, y, z)}.
+Convert to \code{df |> unnest(c(x, y, z))}. If you previously created a new
 variable in \code{unnest()} you'll now need to do it explicitly with \code{mutate()}.
-Convert \code{df \%>\% unnest(y = fun(x, y, z))}
-to \code{df \%>\% mutate(y = fun(x, y, z)) \%>\% unnest(y)}.}
+Convert \code{df |> unnest(y = fun(x, y, z))}
+to \code{df |> mutate(y = fun(x, y, z)) |> unnest(y)}.}
 
 \item{keep_empty}{By default, you get one row of output for each element
 of the list that you are unchopping/unnesting. This means that if there's a
@@ -86,7 +86,7 @@ don't want in the output use \code{select()} to remove them prior to
 unnesting.}
 
 \item{.id}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}:
-convert \code{df \%>\% unnest(x, .id = "id")} to \verb{df \%>\% mutate(id = names(x)) \%>\% unnest(x))}.}
+convert \code{df |> unnest(x, .id = "id")} to \verb{df |> mutate(id = names(x)) |> unnest(x))}.}
 
 \item{.sep}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}:
 use \code{names_sep} instead.}
@@ -115,10 +115,15 @@ unnest <- unnest_legacy
 
 \examples{
 data(pbmc_small)
-pbmc_small |> 
-    nest(data=-groups) |> 
+pbmc_small |>
+    nest(data=-groups) |>
     unnest(data)
 
+}
+\references{
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
 }
 \seealso{
 Other rectangling: 

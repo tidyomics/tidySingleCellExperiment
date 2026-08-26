@@ -46,7 +46,7 @@ on to \code{\link[dplyr:group_by]{group_by()}}.
 For \code{count()}: if \code{FALSE} will include counts for empty groups (i.e. for
 levels of factors that don't exist in the data).
 
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} For \code{add_count()}: deprecated since it
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#defunct}{\figure{lifecycle-defunct.svg}{options: alt='[Defunct]'}}}{\strong{[Defunct]}} For \code{add_count()}: defunct since it
 can't actually affect the output.}
 }
 \value{
@@ -55,10 +55,10 @@ group transiently, so the output has the same groups as the input.
 }
 \description{
 \code{count()} lets you quickly count the unique values of one or more variables:
-\code{df \%>\% count(a, b)} is roughly equivalent to
-\code{df \%>\% group_by(a, b) \%>\% summarise(n = n())}.
+\code{df |> count(a, b)} is roughly equivalent to
+\code{df |> group_by(a, b) |> summarise(n = n())}.
 \code{count()} is paired with \code{tally()}, a lower-level helper that is equivalent
-to \code{df \%>\% summarise(n = n())}. Supply \code{wt} to perform weighted counts,
+to \code{df |> summarise(n = n())}. Supply \code{wt} to perform weighted counts,
 switching the summary from \code{n = n()} to \code{n = sum(wt)}.
 
 \code{add_count()} and \code{add_tally()} are equivalents to \code{count()} and \code{tally()}
@@ -69,4 +69,9 @@ with group-wise counts.
 data(pbmc_small)
 pbmc_small |> count(groups)
     
+}
+\references{
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
 }

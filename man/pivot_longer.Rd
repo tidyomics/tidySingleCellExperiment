@@ -111,7 +111,7 @@ and the name of the value column will be derived from part of the
 existing column names.}
 
 \item{values_drop_na}{If \code{TRUE}, will drop rows that contain only \code{NA}s
-in the \code{value_to} column. This effectively converts explicit missing values
+in the \code{values_to} column. This effectively converts explicit missing values
 to implicit missing values, and should generally be used only when missing
 values in \code{data} were created by its structure.}
 }
@@ -137,4 +137,9 @@ pbmc_small |> pivot_longer(
   cols=c(orig.ident, groups),
   names_to="name", values_to="value")
 
+}
+\references{
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
 }

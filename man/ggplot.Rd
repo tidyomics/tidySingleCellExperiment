@@ -26,7 +26,7 @@ evaluation.}
 \description{
 \code{ggplot()} initializes a ggplot object. It can be used to
 declare the input data frame for a graphic and to specify the
-set of plot aesthetics intended to be common throughout all
+set of aesthetic mappings for the plot, intended to be common throughout all
 subsequent layers unless specifically overridden.
 }
 \details{
@@ -68,4 +68,12 @@ pbmc_small |>
   ggplot(aes(groups, nCount_RNA)) +
   geom_boxplot()
     
+}
+\references{
+Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics ecosystem: enhancing omic data analyses. Nat Methods 21, 1166–1170 (2024). https://doi.org/10.1038/s41592-024-02299-2
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
+}
+\seealso{
+The \href{https://ggplot2-book.org/getting-started}{first steps chapter} of the online ggplot2 book.
 }
