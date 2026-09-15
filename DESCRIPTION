@@ -19,8 +19,8 @@ License: GPL-3
 Depends:
     R (>= 4.4.0),
     SingleCellExperiment,
-    ttservice (>= 0.4.0),
-    tidySummarizedExperiment
+    ttservice (>= 0.5.0),
+    tidySummarizedExperiment (>= 1.23.3)
 Imports:
     tidyprint,
     dplyr, 
