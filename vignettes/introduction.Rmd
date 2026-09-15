@@ -21,7 +21,7 @@ vignette: >
 ```{r, echo=FALSE, include=FALSE}
 library(knitr)
 knitr::opts_chunk$set(
-    cache=TRUE, warning=FALSE,
+    cache=FALSE, warning=FALSE,
     message=FALSE, cache.lazy=FALSE)
 ```
 
@@ -38,7 +38,7 @@ __*tidyverse*__ |
 `ggplot2`       | Plotting with `ggplot()`
 `plotly`        | Plotting with `plot_ly()`
 **Utilities**   |  
-`as_tibble()`   | Convert cell-wise information to a `tbl_df`
+`as_tibble()`   | Convert to the feature-by-sample `tbl_df`
 `join_features()`   | Add feature-wise information; <br> returns a `tidySingleCellExperiment` object
 `aggregate_cells()` | Aggregate feature abundances as pseudobulks; <br> returns a `SummarizedExperiment`
 : (\#tab:table) Available `tidySingleCellExperiment` functions and utilities.
@@ -154,14 +154,14 @@ The *tidyverse* function `extract()` can be used to convert a character column
 into multiple columns using regular expression groups.
 
 ```{r}
-# Create sample column
+# Create a run column from the file path
 pbmc_small_polished <-
-    pbmc_small_tidy %>%
-    extract(file, "sample", "../data/([a-z0-9]+)/outs.+", remove=FALSE)
+    pbmc_small_tidy |>
+    extract(file, "run", "../data/([a-z0-9]+)/outs.+", remove=FALSE)
 
-# Reorder to have sample column up front
-pbmc_small_polished %>%
-    select(sample, everything())
+# Reorder to have run column up front
+pbmc_small_polished |>
+    select(run, everything())
 ```
 
 # Preliminary plots
@@ -194,7 +194,7 @@ We can treat `pbmc_small_polished` as a `tibble` for plotting.
 Here we plot number of features per cell.
 
 ```{r plot1}
-pbmc_small_polished %>%
+pbmc_small_polished |>
     ggplot(aes(nFeature_RNA, fill=groups)) +
     geom_histogram() +
     custom_theme
@@ -203,7 +203,7 @@ pbmc_small_polished %>%
 Here we plot total features per cell.
 
 ```{r plot2}
-pbmc_small_polished %>%
+pbmc_small_polished |>
     ggplot(aes(groups, nCount_RNA, fill=groups)) +
     geom_boxplot(outlier.shape=NA) +
     geom_jitter(width=0.1) +
@@ -213,8 +213,8 @@ pbmc_small_polished %>%
 Here we plot abundance of two features for each group.
 
 ```{r}
-pbmc_small_polished %>%
-    join_features(features=c("HLA-DRA", "LYZ"), shape="long") %>%
+pbmc_small_polished |>
+    join_features(features=c("HLA-DRA", "LYZ"), shape="long") |>
     ggplot(aes(groups, .abundance_counts + 1, fill=groups)) +
     geom_boxplot(outlier.shape=NA) +
     geom_jitter(aes(size=nCount_RNA), alpha=0.5, width=0.2) +
@@ -232,13 +232,13 @@ and proceed with data processing with Bioconductor packages, such as
 ```{r preprocess}
 # Identify variable genes with scran
 variable_genes <-
-    pbmc_small_polished %>%
-    modelGeneVar() %>%
+    pbmc_small_polished |>
+    modelGeneVar() |>
     getTopHVGs(prop=0.1)
 
 # Perform PCA with scater
 pbmc_small_pca <-
-    pbmc_small_polished %>%
+    pbmc_small_polished |>
     runPCA(subset_row=variable_genes)
 
 pbmc_small_pca
@@ -249,9 +249,9 @@ we can use `as_tibble()` to permanently convert a `tidySingleCellExperiment` int
 
 ```{r pc_plot}
 # Create pairs plot with 'GGally'
-pbmc_small_pca %>%
-    as_tibble() %>%
-    select(contains("PC"), everything()) %>%
+pbmc_small_pca |>
+    as_tibble() |>
+    select(contains("PC"), everything()) |>
     GGally::ggpairs(columns=1:5, aes(colour=groups)) +
     custom_theme
 ```
@@ -266,14 +266,14 @@ pbmc_small_cluster <- pbmc_small_pca
 # Assign clusters to the 'colLabels'
 # of the 'SingleCellExperiment' object
 colLabels(pbmc_small_cluster) <-
-    pbmc_small_pca %>%
-    buildSNNGraph(use.dimred="PCA") %>%
-    igraph::cluster_walktrap() %$%
-    membership %>%
+    pbmc_small_pca |>
+    buildSNNGraph(use.dimred="PCA") |>
+    igraph::cluster_walktrap() |>
+    (\(x) x$membership)() |>
     as.factor()
 
 # Reorder columns
-pbmc_small_cluster %>%
+pbmc_small_cluster |>
     select(label, everything())
 ```
 
@@ -281,7 +281,7 @@ And interrogate the output as if it was a regular `tibble`.
 
 ```{r cluster count}
 # Count number of cells for each cluster per group
-pbmc_small_cluster %>%
+pbmc_small_cluster |>
     count(groups, label)
 ```
 
@@ -291,19 +291,19 @@ We can identify and visualise cluster markers combining `SingleCellExperiment`,
 ```{r}
 # Identify top 10 markers per cluster
 marker_genes <-
-    pbmc_small_cluster %>%
-    findMarkers(groups=pbmc_small_cluster$label) %>%
-    as.list() %>%
-    map(~ .x %>%
-        head(10) %>%
-        rownames()) %>%
-    unlist() %>%
+    pbmc_small_cluster |>
+    findMarkers(groups=pbmc_small_cluster$label) |>
+    as.list() |>
+    map(~ .x |>
+        head(10) |>
+        rownames()) |>
+    unlist() |>
     unique()
 
 # Plot heatmap
-pbmc_small_cluster %>%
-    join_features(features=marker_genes, shape="long") %>%
-    group_by(label) %>%
+pbmc_small_cluster |>
+    join_features(features=marker_genes, shape="long") |>
+    group_by(label) |>
     heatmap(
         .row=.feature, .column=.sample, 
         .value=.abundance_counts, scale="column")
@@ -316,10 +316,10 @@ This is useful when you have multiple datasets that you want to analyze together
 
 ```{r}
 # Create two subsets of the data
-pbmc_subset1 <- pbmc_small_cluster %>%
+pbmc_subset1 <- pbmc_small_cluster |>
     filter(groups == "g1")
 
-pbmc_subset2 <- pbmc_small_cluster %>%
+pbmc_subset2 <- pbmc_small_cluster |>
     filter(groups == "g2")
 
 # Combine them using append_samples
@@ -333,14 +333,14 @@ We can calculate the first 3 UMAP dimensions using `r BiocStyle::Biocpkg("scater
 
 ```{r umap}
 pbmc_small_UMAP <-
-    pbmc_small_cluster %>%
+    pbmc_small_cluster |>
     runUMAP(ncomponents=3)
 ```
 
 And we can plot the result in 3D using `r BiocStyle::CRANpkg("plotly")`.
 
 ```{r umap plot, eval=FALSE}
-pbmc_small_UMAP %>%
+pbmc_small_UMAP |>
     plot_ly(
         x=~`UMAP1`,
         y=~`UMAP2`,
@@ -362,27 +362,27 @@ blueprint <- celldex::BlueprintEncodeData()
 
 # Infer cell identities
 cell_type_df <- 
-    logcounts(pbmc_small_UMAP) %>%
-    Matrix::Matrix(sparse = TRUE) %>%
+    logcounts(pbmc_small_UMAP) |>
+    Matrix::Matrix(sparse = TRUE) |>
     SingleR::SingleR(
         ref=blueprint,
         labels=blueprint$label.main,
-        method="single") %>%
-    as.data.frame() %>%
-    as_tibble(rownames="cell") %>%
-    select(cell, first.labels)
+        method="single") |>
+    as.data.frame() |>
+    as_tibble(rownames=".sample") |>
+    select(.sample, first.labels)
 ```
 
 ```{r}
 # Join UMAP and cell type info
 data(cell_type_df)
 pbmc_small_cell_type <-
-    pbmc_small_UMAP %>%
-    left_join(cell_type_df, by="cell")
+    pbmc_small_UMAP |>
+    left_join(cell_type_df, by=c(".sample"="cell"))
 
 # Reorder columns
-pbmc_small_cell_type %>%
-    select(cell, first.labels, everything())
+pbmc_small_cell_type |>
+    select(.sample, first.labels, everything())
 ```
 
 We can easily summarise the results. For example, we can see how
@@ -390,18 +390,18 @@ cell type classification overlaps with cluster classification.
 
 ```{r}
 # Count number of cells for each cell type per cluster
-pbmc_small_cell_type %>%
+pbmc_small_cell_type |>
     count(label, first.labels)
 ```
 
 We can easily reshape the data for building information-rich faceted plots.
 
 ```{r}
-pbmc_small_cell_type %>%
+pbmc_small_cell_type |>
     # Reshape and add classifier column
     pivot_longer(
         cols=c(label, first.labels),
-        names_to="classifier", values_to="label") %>%
+        names_to="classifier", values_to="label") |>
     # UMAP plots for cell type and cluster
     ggplot(aes(UMAP1, UMAP2, color=label)) +
     facet_wrap(~classifier) +
@@ -412,11 +412,13 @@ pbmc_small_cell_type %>%
 We can easily plot gene correlation per cell category, adding multi-layer annotations.
 
 ```{r}
-pbmc_small_cell_type %>%
-    # Add some mitochondrial abundance values
-    mutate(mitochondrial=rnorm(dplyr::n())) %>%
+# Add a per-cell mitochondrial abundance for the plot
+pbmc_small_cell_type$mitochondrial <- rnorm(ncol(pbmc_small_cell_type))
+
+pbmc_small_cell_type |>
     # Plot correlation
-    join_features(features=c("CST3", "LYZ"), shape="wide") %>%
+    join_features(features=c("CST3", "LYZ"), shape="wide") |>
+    subset_sample_data() |> 
     ggplot(aes(CST3+1, LYZ+1, color=groups, size=mitochondrial)) +
     facet_wrap(~first.labels, scales="free") +
     geom_point() +
@@ -434,11 +436,11 @@ and then `nest()` based on the new classification.
 
 ```{r}
 pbmc_small_nested <-
-    pbmc_small_cell_type %>%
-    filter(first.labels != "Erythrocytes") %>%
+    pbmc_small_cell_type |>
+    filter(first.labels != "Erythrocytes") |>
     mutate(cell_class=if_else(
         first.labels %in% c("Macrophages", "Monocytes"),
-        true="myeloid", false="lymphoid")) %>%
+        true="myeloid", false="lymphoid")) |>
     nest(data=-cell_class)
 
 pbmc_small_nested
@@ -450,21 +452,21 @@ cluster using both tidyverse and SingleCellExperiment seamlessly.
 
 ```{r warning=FALSE}
 pbmc_small_nested_reanalysed <-
-    pbmc_small_nested %>%
+    pbmc_small_nested |>
     mutate(data=map(data, ~ {
         # feature selection
-        variable_genes <- .x %>%
-            modelGeneVar() %>%
+        variable_genes <- .x |>
+            modelGeneVar() |>
             getTopHVGs(prop=0.3)
         # dimension reduction
-        .x <- .x %>%
-            runPCA(subset_row=variable_genes) %>%
+        .x <- .x |>
+            runPCA(subset_row=variable_genes) |>
             runUMAP(ncomponents=3)
         # clustering
-        colLabels(.x) <- .x %>%
-            buildSNNGraph(use.dimred="PCA") %>%
-            cluster_walktrap() %$%
-            membership %>%
+        colLabels(.x) <- .x |>
+            buildSNNGraph(use.dimred="PCA") |>
+            cluster_walktrap() |>
+            (\(x) x$membership)() |>
             as.factor()
         return(.x)
     }))
@@ -474,13 +476,13 @@ pbmc_small_nested_reanalysed
 We can then `unnest()` and plot the new classification.
 
 ```{r}
-pbmc_small_nested_reanalysed %>%
+pbmc_small_nested_reanalysed |>
     # Convert to 'tibble', else 'SingleCellExperiment'
     # drops reduced dimensions when unifying data sets.
-    mutate(data=map(data, ~as_tibble(.x))) %>%
-    unnest(data) %>%
+    mutate(data=map(data, ~as_tibble(.x))) |>
+    unnest(data) |>
     # Define unique clusters
-    unite("cluster", c(cell_class, label), remove=FALSE) %>%
+    unite("cluster", c(cell_class, label), remove=FALSE) |>
     # Plotting
     ggplot(aes(UMAP1, UMAP2, color=cluster)) +
     facet_wrap(~cell_class) +
@@ -492,27 +494,27 @@ We can perform a large number of functional analyses on data subsets. For exampl
 
 ```{r, eval=FALSE}
 pbmc_small_nested_interactions <-
-    pbmc_small_nested_reanalysed %>%
+    pbmc_small_nested_reanalysed |>
     # Unnest based on cell category
-    unnest(data) %>%
+    unnest(data) |>
     # Create unambiguous clusters
-    mutate(integrated_clusters=first.labels %>% as.factor() %>% as.integer()) %>%
+    mutate(integrated_clusters=first.labels |> as.factor() |> as.integer()) |>
     # Nest based on sample
-    nest(data=-sample) %>%
+    nest(data=-run) |>
     mutate(interactions=map(data, ~ {
         # Produce variables. Yuck!
         cluster <- colData(.x)$integrated_clusters
-        data <- data.frame(assay(.x) %>% as.matrix())
+        data <- data.frame(assay(.x) |> as.matrix())
         # Ligand/Receptor analysis using 'SingleCellSignalR'
-        data %>%
-            cell_signaling(genes=rownames(data), cluster=cluster) %>%
-            inter_network(data=data, signal=., genes=rownames(data), cluster=cluster) %$%
-            `individual-networks` %>%
+        data |>
+            cell_signaling(genes=rownames(data), cluster=cluster) |>
+            inter_network(data=data, signal=_, genes=rownames(data), cluster=cluster) |>
+            (\(x) x$`individual-networks`)() |>
             map_dfr(~ append_samples(as_tibble(.x)))
     }))
 
-pbmc_small_nested_interactions %>%
-    select(-data) %>%
+pbmc_small_nested_interactions |>
+    select(-data) |>
     unnest(interactions)
 ```
 
@@ -534,7 +536,7 @@ In `tidySingleCellExperiment`, cell aggregation can be achieved using `aggregate
 which will return an object of class `r BiocStyle::Biocpkg("SummarizedExperiment")`.
  
 ```{r}
-pbmc_small_tidy %>%
+pbmc_small_tidy |>
   aggregate_cells(groups, assays="counts")
 ```
 
