@@ -1,419 +1,125 @@
-library(S4Vectors)
 data(pbmc_small)
 df <- pbmc_small
-df$number <- sample(seq(ncol(df)))
-df$factor <- sample(
-    factor(1:3, labels=paste0("g", 1:3)),
-    ncol(df), TRUE, c(0.1, 0.3, 0.6))
 
-# test_that("arrange()", {
-#     expect_identical(
-#         arrange(df, number), 
-#         df[, order(df$number)])
-#     suppressWarnings({
-#         fd <- df %>%
-#             scater::logNormCounts() %>% 
-#             scater::runPCA()
-#     })
-#     expect_identical(
-#         arrange(fd, PC1), 
-#         fd[, order(reducedDim(fd)[, 1])])
-#     fd <- df %>%
-#         mutate(foo=seq(ncol(df))) %>%
-#         arrange(foo) %>% select(-foo)
-#     expect_identical(fd, df)
-# })
+# Only the verbs that tidySummarizedExperiment does not provide are defined in
+# this package. Everything else is exercised by tidySummarizedExperiment's own
+# tests; here we check that those verbs resolve to it and keep the object.
 
-test_that("append_samples()", {
-    # warn about duplicated cells names
-    expect_warning(fd <- append_samples(df, df))
-    # cell names should be unique after binding
-    expect_true(!any(duplicated(pull(fd, .cell))))
+test_that("delegated verbs resolve to tidySummarizedExperiment", {
+    delegated <- c("mutate", "filter", "select", "rename", "slice", "pull",
+        "left_join", "inner_join", "right_join", "full_join", "distinct",
+        "group_by", "summarise", "count", "rowwise", "sample_n", "sample_frac",
+        "group_split", "bind_rows", "append_samples", "nest", "unnest",
+        "extract", "unite", "separate", "pivot_longer", "plot_ly")
+    # This package must not define them; the behavioural tests below and in
+    # tidySummarizedExperiment check that they still work on an object
+    for (v in delegated) {
+        expect_null(
+            utils::getS3method(v, "SingleCellExperiment", optional=TRUE),
+            info=v)
+    }
 })
 
-test_that("bind_cols()", {
-    fd <- bind_cols(df, select(df, factor))
-    i <- grep("^factor", names(colData(fd)))
-    expect_length(i, 2)
-    expect_identical(fd[[i[1]]], df$factor)
-    expect_identical(fd[[i[2]]], df$factor)
-    expect_identical(
-        select(fd, -starts_with("factor")), 
-        select(df, -factor))
-})
-
-test_that("distinct()", {
-    fd <- distinct(df, factor)
-    expect_equal(nrow(fd), nlevels(df$factor))
-    expect_identical(fd[[1]], unique(df$factor))
-})
-
-test_that("filter()", {
-    fd <- filter(df, factor %in% levels(df$factor))
-    expect_identical(df, fd)
-    fd <- filter(df, factor == "g1")
-    expect_equal(ncol(fd), sum(df$factor == "g1"))
-    # missing cell names
-    fd <- df; colnames(fd) <- NULL
-    #expect_silent(filter(df, number == 1))     # I DON'T KNOW WHY THESE TESTS GIVES WARNING IN THE GITHUB ACTION
-    expect_message(fd <- filter(fd, number < 10))
-    expect_type(pull(fd, .cell), "character")
-    expect_null(colnames(fd))
-})
-
-test_that("group_by()", {
-    fd <- group_by(df, factor)
-    expect_equal(n_groups(fd), nlevels(df$factor))
-    expect_equal(group_size(fd), tabulate(df$factor))
-})
-
-test_that("summaris/ze()", {
-    fd <- mutate(df, n=runif(ncol(df)))
-    ne <- summarise(fd, a=mean(n))
-    mo <- summarize(fd, b=mean(n))
-    expect_identical(ne$a, mean(fd$n))
-    expect_identical(ne$a, mo$b)
-})
-
-test_that("mutate()", {
-    fd <- mutate(df, peter="pan")
-    expect_true(all(fd$peter == "pan"))
-    fd <- mutate(df, number=paste(number))
-    expect_identical(fd$number, paste(df$number))
-    
-    # special columns are blocked
-    df |>
-      mutate(.cell=1) |>
-      expect_error("you are trying to mutate a column that is view only")
-    
-    df |>
-      mutate(PC_10=1) |>
-      expect_error("you are trying to mutate a column that is view only")
-})
-
-test_that("rename()", {
-    fd <- rename(df, num=number, fac=factor)
-    expect_identical(fd$num, df$number)
-    expect_identical(fd$fac, df$factor)
-    
-    df |> 
-      rename(ne=mo) |> 
-      expect_error("Column `mo` doesn't exist")
-    
-    # special columns are blocked
-    # ...'to' cannot be special
-    
-    df |>
-      rename(a=PC_1) |>
-      expect_error("you are trying to rename a column that is view only")  
-    
-    df |> 
-      rename(a=.cell) |> 
-      expect_error("you are trying to rename a column that is view only")
-    # ...'from' cannot be special
-    
-    df |> 
-      rename(PC_1=number) |> 
-      expect_error("These names are duplicated")
-    
-    df |> 
-      rename(.cell=number) |> 
-      expect_error("These names are duplicated")
-})
-
-test_that("left_join()", {
-    y <- df |> 
-        distinct(factor) |> 
-        mutate(string=letters[seq(nlevels(df$factor))])
-    fd <- left_join(df, y, by="factor")
+test_that("delegated verbs keep the object and its reduced dimensions", {
+    fd <- filter(df, groups == "g1")
     expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(n <- ncol(colData(fd)), ncol(colData(df))+1)
-    expect_identical(colData(fd)[-n], colData(df))
-})
+    expect_identical(reducedDimNames(fd), reducedDimNames(df))
+    expect_true(ncol(fd) < ncol(df))
 
-test_that("left_join(), with DataFrame y", {
-    y <- df |> 
-        distinct(factor) |> 
-        mutate(string=letters[seq(nlevels(df$factor))]) |> 
-        DataFrame()
-    fd <- left_join(df, y, by="factor")
+    fd <- mutate(df, blah=1)
     expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(n <- ncol(colData(fd)), ncol(colData(df))+1)
-    expect_identical(colData(fd)[-n], colData(df))
+    expect_true("blah" %in% colnames(colData(fd)))
+    expect_identical(dim(fd), dim(df))
 })
 
-test_that("inner_join()", {
-    y <- df |> 
-        distinct(factor) |> 
-        mutate(string=letters[seq(nlevels(df$factor))]) |> 
-        slice(1)
-    fd <- inner_join(df, y, by="factor")
+test_that("delegated verbs never write reduced dimensions into colData", {
+    y <- data.frame(.sample=colnames(df), ann=seq_len(ncol(df)))
+    for (fd in list(
+        suppressMessages(left_join(df, y, by=".sample")),
+        mutate(df, blah=1),
+        filter(df, groups == "g1"),
+        tidyr::separate(df, groups, c("p", "q"), sep=1))) {
+        expect_false(any(
+            c("PC_1", "tSNE_1") %in% colnames(colData(fd))),
+            info=paste(dim(fd), collapse="x"))
+        # nor turn them into assays
+        expect_identical(assayNames(fd), assayNames(df))
+        expect_identical(reducedDimNames(fd), reducedDimNames(df))
+    }
+})
+
+test_that("reduced dimensions are usable in delegated verbs", {
+    fd <- filter(df, PC_1 > 0)
     expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(n <- ncol(colData(fd)), ncol(colData(df))+1)
-    expect_equal(ncol(fd), sum(df$factor == fd$factor[1]))
+    expect_identical(ncol(fd), sum(reducedDim(df, "PCA")[, 1] > 0))
+    # and are not written into colData
+    fd <- mutate(df, pc_pos=PC_1 > 0)
+    expect_true("pc_pos" %in% colnames(colData(fd)))
+    expect_false("PC_1" %in% colnames(colData(fd)))
 })
 
-test_that("inner_join(), with DataFrame y", {
-    y <- df |> 
-        distinct(factor) |> 
-        mutate(string=letters[seq(nlevels(df$factor))]) |> 
-        slice(1) |> DataFrame()
-    fd <- inner_join(df, y, by="factor")
+test_that("delegated append_samples() and nest()/unnest() keep the subclass", {
+    # Binding an object to itself duplicates the cell names, which is warned
+    fd <- suppressWarnings(append_samples(pbmc_small, pbmc_small))
     expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(n <- ncol(colData(fd)), ncol(colData(df))+1)
-    expect_equal(ncol(fd), sum(df$factor == fd$factor[1]))
-})
+    expect_identical(ncol(fd), 2L*ncol(df))
+    expect_identical(reducedDimNames(fd), reducedDimNames(df))
 
-test_that("right_join()", {
-    y <- df |>
-        distinct(factor) |>
-        mutate(string=letters[seq(nlevels(df$factor))]) |>
-        slice(1)
-    fd <- right_join(df, y, by="factor")
+    fd <- unnest(nest(df, data=-groups), data)
     expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(n <- ncol(colData(fd)), ncol(colData(df))+1)
-    expect_equal(ncol(fd), sum(df$factor == fd$factor[1]))
+    expect_identical(dim(fd), dim(df))
 })
 
-test_that("right_join(), with DataFrame y", {
-    y <- df |>
-        distinct(factor) |>
-        mutate(string=letters[seq(nlevels(df$factor))]) |>
-        slice(1) |> DataFrame()
-    fd <- right_join(df, y, by="factor")
+test_that("bind_cols() stays cell-aligned", {
+    # tidySummarizedExperiment's bind_cols() binds against the
+    # feature-by-sample tibble, so this method is kept here
+    fd <- bind_cols(df, data.frame(x=seq_len(ncol(df))))
     expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(n <- ncol(colData(fd)), ncol(colData(df))+1)
-    expect_equal(ncol(fd), sum(df$factor == fd$factor[1]))
+    expect_identical(dim(fd), dim(df))
+    expect_identical(fd$x, seq_len(ncol(df)))
 })
 
-test_that("full_join()", {
-    # w/ duplicated cell names
-    y <- tibble(factor="g2", other=1:3)
-    fd <- expect_message(full_join(df, y, by=join_by(factor), relationship="many-to-many"))
+test_that("arrange()", {
+    fd <- arrange(df, nFeature_RNA)
     expect_s3_class(fd, "tbl_df")
-    expect_true(all(is.na(fd$other[fd$factor != "g2"])))
-    expect_true(all(!is.na(fd$other[fd$factor == "g2"])))
-    expect_equal(nrow(fd), ncol(df)+2*sum(df$factor == "g2"))
-    # w/o duplicates
-    y <- tibble(factor="g2", other=1)
-    
-    # I DON'T KNOW WHY THESE TESTS GIVES WARNING IN THE GITHUB ACTION
-    # fd <- expect_silent(full_join(df, y, by=join_by(factor)))   
-    # expect_s4_class(fd, "SingleCellExperiment")
-    # expect_identical(
-    #     select(fd, -other), 
-    #     mutate(df, factor=paste(factor)))
-})
-
-test_that("full_join(), with DataFrame y", {
-    # w/ duplicated cell names
-    y <- tibble(factor="g2", other=1:3) |> DataFrame()
-    fd <- expect_message(full_join(df, y, by=join_by(factor), relationship="many-to-many"))
-    expect_s3_class(fd, "tbl_df")
-    expect_true(all(is.na(fd$other[fd$factor != "g2"])))
-    expect_true(all(!is.na(fd$other[fd$factor == "g2"])))
-    expect_equal(nrow(fd), ncol(df)+2*sum(df$factor == "g2"))
-    # w/o duplicates
-    y <- tibble(factor="g2", other=1) |> DataFrame()
-    
-    # I DON'T KNOW WHY THESE TESTS GIVES WARNING IN THE GITHUB ACTION
-    # fd <- expect_silent(full_join(df, y, by=join_by(factor)))   
-    # expect_s4_class(fd, "SingleCellExperiment")
-    # expect_identical(
-    #     select(fd, -other), 
-    #     mutate(df, factor=paste(factor)))
-})
-
-test_that("anti_join()", {
-  y <- df |> 
-    distinct(factor) |> 
-    mutate(string=letters[seq(nlevels(df$factor))]) |> 
-    filter(factor !="g1")
-  fd <- anti_join(df, y, by="factor")
-  expect_s4_class(fd, "SingleCellExperiment")
-  expect_equal(n <- ncol(colData(fd)), ncol(colData(df)))
-  expect_lt(ncol(fd), ncol(df))
-})
-
-test_that("slice()", {
-  # I DON'T KNOW WHY THESE TESTS GIVES WARNING 
-  # Please use `all_of()` or `any_of()` instead.
-    #expect_identical(slice(df), df[, 0])
-    #expect_identical(slice(df, ncol(df)+1), df[, 0])
-  
-    expect_identical(slice(df, 1), df[, 1])
-    expect_identical(slice(df, -1), df[, -1])
-    i <- sample(ncol(df), 5)
-    expect_identical(slice(df, i), df[, i])
-    expect_identical(slice(df, -i), df[, -i])
-})
-
-test_that("slice_sample()", {
-    pbmc_small |>
-        slice_sample(n=0) |>
-        ncol() |>
-        expect_equal(0)
-    pbmc_small |>
-        slice_sample(n=50) |>
-        ncol() |>
-        expect_equal(50)
-})
-
-test_that("slice_head()", {
-    pbmc_small |>
-        slice_head(n=0) |>
-        ncol() |>
-        expect_equal(0)
-    pbmc_small |>
-        slice_head(n=50) |>
-        ncol() |>
-        expect_equal(50)
-    expect_equal(
-        colnames(pbmc_small) |> head(n=50),
-        pbmc_small |> slice_head(n=50) |> colnames()
-    )
-})
-
-test_that("slice_tail()", {
-    pbmc_small |>
-        slice_tail(n=0) |>
-        ncol() |>
-        expect_equal(0)
-    pbmc_small |>
-        slice_tail(n=50) |>
-        ncol() |>
-        expect_equal(50)
-    expect_equal(
-        colnames(pbmc_small) |> tail(n=50),
-        pbmc_small |> slice_tail(n=50) |> colnames()
-    )
-})
-
-test_that("slice_min()", {
-    pbmc_small |>
-        slice_min(nFeature_RNA, n=0) |>
-        ncol() |>
-        expect_equal(0)
-    pbmc_small |>
-        slice_min(nFeature_RNA, n=5) |>
-        ncol() |>
-        expect_equal(5)
-    expect_equal(
-        pbmc_small |> as_tibble() |>
-            arrange(nFeature_RNA) |>
-            head(n=5) %>% pull(.cell),
-        pbmc_small |> slice_min(nFeature_RNA, n=5) |> colnames()
-  )
-})
-
-test_that("slice_max()", {
-    pbmc_small |>
-        slice_max(nFeature_RNA, n=0) |>
-        ncol() |>
-        expect_equal(0)
-    pbmc_small |>
-        slice_max(nFeature_RNA, n = 5) |>
-        ncol() |>
-        expect_equal(5)
-    expect_equal(
-        pbmc_small |> as_tibble() |>
-            arrange(desc(nFeature_RNA)) |>
-            head(n=5) %>% pull(.cell),
-        pbmc_small |> slice_max(nFeature_RNA, n=5) |> colnames()
-  )
-})
-
-test_that("slice_min() slice_max() tibble input for order_by", {
-  pbmc_small |>
-    slice_min(tibble::tibble(nFeature_RNA, nCount_RNA), n=5) |>
-    ncol() |>
-    expect_equal(5)
-  pbmc_small |>
-    slice_max(tibble::tibble(nFeature_RNA, nCount_RNA), n=5) |>
-    ncol() |>
-    expect_equal(5)
-})
-
-test_that("select()", {
-    fd <- select(df, .cell, number)
-    expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(dim(fd), dim(df))
-    fd <- select(df, number)
-    expect_s3_class(fd, "tbl_df")
-    expect_equal(nrow(fd), ncol(df))
-})
-
-test_that("sample_n()", {
-    fd <- sample_n(df, n <- 50)
-    expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(nrow(fd), nrow(df))
-    expect_equal(ncol(fd), n)
-    fd <- sample_n(df, 1e3, TRUE)
-    expect_s3_class(fd, "tbl_df")
-    expect_equal(nrow(fd), 1e3)
-})
-
-test_that("sample_frac()", {
-    fd <- sample_frac(df, 0.1)
-    expect_s4_class(fd, "SingleCellExperiment")
-    expect_equal(nrow(fd), nrow(df))
-    expect_equal(ncol(fd), ncol(df)/10)
-    fd <- sample_frac(df, 10, TRUE)
-    expect_s3_class(fd, "tbl_df")
-    expect_equal(nrow(fd), ncol(df)*10)
-})
-
-test_that("count()", {
-    fd <- count(df, factor)
-    expect_s3_class(fd, "tbl_df")
-    expect_equal(nrow(fd), nlevels(df$factor))
-    expect_identical(fd$n, tabulate(df$factor))
+    expect_identical(nrow(fd), nrow(df)*ncol(df))
+    expect_true(!is.unsorted(fd$nFeature_RNA))
 })
 
 test_that("add_count()", {
-    fd <- add_count(df, factor)
-    expect_identical(select(fd, -n), df)
-    expect_identical(fd$n, unname(c(table(df$factor)[df$factor])))
-})
-
-test_that("rowwise()", {
-    df |> 
-    summarise(sum(lys)) |>
-    expect_error("object 'lys' not found")
-  
-    df$lys <- replicate(ncol(df), sample(10, 3), FALSE)
-    fd <- df |> rowwise() |> summarise(sum(lys))
+    fd <- add_count(df, groups)
     expect_s3_class(fd, "tbl_df")
-    expect_equal(dim(fd), c(ncol(df), 1))
-    expect_identical(fd[[1]], sapply(df$lys, sum))
+    expect_identical(nrow(fd), nrow(df)*ncol(df))
+    expect_true("n" %in% colnames(fd))
+    # 'n' counts rows of the feature-by-sample tibble within each group
+    expect_identical(
+        sort(unique(fd$n)),
+        sort(unname(as.integer(table(as_tibble(df)$groups)))))
 })
 
-test_that("group_split() works for one variable", {
-  fd <- df |> 
-    group_split(groups)
-  expect_equal(length(fd), length(unique(df$groups)))
+test_that("anti_join()", {
+    y <- tibble::tibble(groups=unique(df$groups)[1])
+    fd <- anti_join(df, y, by="groups")
+    expect_s3_class(fd, "tbl_df")
+    expect_false(any(fd$groups %in% y$groups))
 })
 
-test_that("group_split() works for combination of variables", {
-    fd <- df |> 
-      group_split(groups, ident)
-    expect_equal(length(fd), length(unique(df$groups)) *
-                   length(unique(df$ident)))
+test_that("slice_head() and slice_tail()", {
+    expect_identical(nrow(slice_head(df, n=3)), 3L)
+    expect_identical(nrow(slice_tail(df, n=3)), 3L)
+    expect_s3_class(slice_head(df, n=1), "tbl_df")
 })
 
-test_that("group_split() works for one logical statement", {
-  fd_log <- df |> 
-    group_split(groups=="g1")
-  fd_var <- df |> 
-    group_split(groups=="g1")
-  expect_equal(lapply(fd_var, count), lapply(fd_log, count))
+test_that("slice_min() and slice_max()", {
+    fd <- slice_min(df, nFeature_RNA, n=1, with_ties=FALSE)
+    expect_identical(nrow(fd), 1L)
+    expect_identical(fd$nFeature_RNA, min(as_tibble(df)$nFeature_RNA))
+    fd <- slice_max(df, nFeature_RNA, n=1, with_ties=FALSE)
+    expect_identical(fd$nFeature_RNA, max(as_tibble(df)$nFeature_RNA))
 })
 
-test_that("group_split() works for two logical statements", {
-  fd <- df |>
-    group_split(PC_1>0 & groups=="g1")
-  fd_counts <- lapply(fd, count)
-  expect_equal(c(fd_counts[[1]], fd_counts[[2]], use.names = FALSE), 
-               list(75, 5))
+test_that("slice_sample()", {
+    expect_identical(nrow(slice_sample(df, n=5)), 5L)
+    expect_identical(nrow(slice_sample(df, prop=0)), 0L)
+    expect_s3_class(slice_sample(df, n=1), "tbl_df")
 })
-

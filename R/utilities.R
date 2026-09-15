@@ -251,7 +251,10 @@ as_meta_data <- function(.data, SingleCellExperiment_object) {
     return(DataFrame(.data_df))
 }
 
-#' @importFrom purrr map_chr
+#' Names of the view-only, column-aligned columns.
+#'
+#' Single-sourced from `auxiliary_colData()`, which is also what `as_tibble()`
+#' binds, so the two cannot disagree on how names are disambiguated.
 #'
 #' @keywords internal
 #'
@@ -259,10 +262,7 @@ as_meta_data <- function(.data, SingleCellExperiment_object) {
 #'
 #' @noRd
 get_special_columns <- function(SingleCellExperiment_object) {
-    get_special_datasets(SingleCellExperiment_object) %>%
-        map(~ .x %>% colnames()) %>%
-        unlist() %>%
-        as.character()
+    colnames(auxiliary_colData(SingleCellExperiment_object))
 }
 
 #' @importFrom SingleCellExperiment reducedDims
@@ -343,15 +343,15 @@ is_sample_feature_deprecated_used <- function(
 
     old_standard_is_used <-
         !"cell" %in% colnames(colData(.data)) &&
-        ("cell" %in% as.character(user_columns) || (cell && !.cell))
+        ("cell" %in% as.character(user_columns) || cell || .cell)
 
     if (old_standard_is_used) {
         tidy_warning(paste0(
-            "from version 1.3.1, the special columns including",
-            " cell id (colnames(se)) has changed to \".cell\".",
-            " This dataset is returned with the old-style vocabulary (cell),",
-            " however, we suggest to update your workflow",
-            " to reflect the new vocabulary (.cell)."))
+            "from version 2.0.0, cells are the columns of the object and are",
+            " keyed by \".sample\" in the tibble abstraction, as in",
+            " tidySummarizedExperiment. The columns \"cell\" and \".cell\" are",
+            " no longer special; please update your workflow to use",
+            " \".sample\"."))
         use_old_special_names <- TRUE
     }
     use_old_special_names
@@ -395,27 +395,6 @@ c_ <- function(x) {
 add_attr <- function(var, attribute, name) {
     attr(var, name) <- attribute
     return(var)
-}
-
-#' @importFrom tidyr spread
-#' @importFrom tibble enframe
-#' @importFrom purrr map reduce
-special_datasets_to_tibble <- function(.singleCellExperiment, ...) {
-    x <- .singleCellExperiment %>%
-        get_special_datasets(...) %>%
-        map(~ {
-            if (!is.null(dim(.x)))
-                return(as_tibble(.x))
-            # If row == 1 do a trick
-            .x %>%
-                tibble::enframe() %>%
-                tidyr::spread(name, value)
-        }) %>% purrr::reduce(bind_cols)
-
-    # To avoid name change by the 'bind_cols()' of 'as_tibble()'
-    colnames(x) <- colnames(x) |>
-        trick_to_avoid_renaming_of_already_unique_columns_by_dplyr()
-    return(x)
 }
 
 #' @importFrom stringr str_replace_all
@@ -516,6 +495,9 @@ splitColData <- function(x, f) {
 
 
 
-cell__ <- get_special_column_name_symbol(".cell")
 feature__ <- get_special_column_name_symbol(".feature")
 sample__ <- get_special_column_name_symbol(".sample")
+
+# Cells are the columns of the object, which the tibble abstraction keys by
+# '.sample'. The two are the same identifier, so 'c_()' resolves to it.
+cell__ <- sample__

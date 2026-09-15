@@ -1,7 +1,7 @@
 Type: Package
 Package: tidySingleCellExperiment
 Title: Brings SingleCellExperiment to the Tidyverse 
-Version: 1.20.2
+Version: 2.0.0
 Authors@R: c(person("Stefano", "Mangiola", 
     comment=c(ORCID="0000-0001-7474-836X"),
     email="mangiolastefano@gmail.com",
@@ -19,7 +19,8 @@ License: GPL-3
 Depends:
     R (>= 4.4.0),
     SingleCellExperiment,
-    ttservice (>= 0.4.0)
+    ttservice (>= 0.4.0),
+    tidySummarizedExperiment
 Imports:
     tidyprint,
     dplyr, 

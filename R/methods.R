@@ -22,6 +22,7 @@ setClass("tidySingleCellExperiment", contains="SingleCellExperiment")
 #' @importFrom ttservice join_features
 #' @importFrom stringr str_c
 #' @importFrom stringr str_subset
+#' @importFrom tidySummarizedExperiment subset_sample_data
 #' @export
 setMethod("join_features", "SingleCellExperiment", function(.data,
     features=NULL, all=FALSE, exclude_zeros=FALSE, shape="wide", ...) {
@@ -32,17 +33,19 @@ setMethod("join_features", "SingleCellExperiment", function(.data,
     # Shape is long
     if (shape == "long") {
       
-        # Suppress generic data frame creation message produced by left_join
+        # Join the requested abundances onto the sample (cell) annotation.
+        # The join is done on the tibble rather than the object, as one row
+        # per requested feature and cell is not representable as an object.
         suppressMessages({
             .data <-
-                .data %>%
-                    left_join(
-                        by=c_(.data)$name,
-                        get_abundance_sc_long(
-                            .data=.data,
-                            features=features,
-                            all=all,
-                            exclude_zeros=exclude_zeros)) %>%
+                get_abundance_sc_long(
+                    .data=.data,
+                    features=features,
+                    all=all,
+                    exclude_zeros=exclude_zeros) %>%
+                    dplyr::left_join(
+                        subset_sample_data(.data),
+                        by=c_(.data)$name) %>%
                     select(!!c_(.data)$symbol, .feature,
                         contains(".abundance"), everything())
         })

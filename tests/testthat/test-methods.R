@@ -15,36 +15,60 @@ test_that("show() uses tidyprint when enabled", {
     expect_true(any(grepl("SummarizedExperiment-tibble abstraction", txt, fixed=TRUE)))
 })
 
-test_that("join_features()", {
+test_that("join_features() wide appends abundances per cell", {
     gs <- sample(rownames(df), 3)
-    # wide (default)
     fd <- join_features(df, gs, assay="counts")
     expect_s4_class(fd, "SingleCellExperiment")
     expect_null(fd$.feature)
+    # The requested features become cell-aligned columns in colData, keeping
+    # their original names
+    expect_true(all(gs %in% colnames(colData(fd))))
+    # Index the DataFrame directly, as as.data.frame() would mangle names
+    # such as 'HLA-DRB1'
     expect_identical(
-        unname(t(as.matrix(as_tibble(fd)[, make.names(gs)]))),
+        unname(t(as.matrix(colData(fd)[, gs, drop=FALSE]))),
         as.matrix(unname(counts(df)[gs, ])))
-    # long
+    # Reduced dimensions stay view-only: neither copied into colData nor
+    # turned into assays
+    expect_identical(
+        setdiff(colnames(colData(fd)), colnames(colData(df))), gs)
+    expect_identical(assayNames(fd), assayNames(df))
+    expect_identical(reducedDimNames(fd), reducedDimNames(df))
+})
+
+test_that("join_features() long returns one row per feature and cell", {
+    gs <- sample(rownames(df), 3)
     fd <- join_features(df, gs, shape="long")
     expect_s3_class(fd, "tbl_df")
     expect_setequal(unique(fd$.feature), gs)
+    expect_identical(nrow(fd), length(gs)*ncol(df))
     expect_true(all(table(fd$.feature) == ncol(df)))
-    expect_identical(
-        matrix(fd$.abundance_counts, nrow=length(gs)),
-        as.matrix(unname(counts(df)[fd$.feature[seq_along(gs)], ])))
+    # Abundances match the assay, matched on feature and cell
+    expected <- vapply(seq_len(nrow(fd)),
+        \(i) counts(df)[fd$.feature[i], fd$.sample[i]],
+        numeric(1))
+    expect_equal(fd$.abundance_counts, expected)
 })
 
-test_that("as_tibble()", {
+test_that("as_tibble() is the feature-by-sample abstraction", {
     fd <- as_tibble(df)
     expect_s3_class(fd, "tbl_df")
-    expect_equal(nrow(fd), ncol(df))
-    ncd <- ncol(colData(df))
-    ndr <- vapply(reducedDims(df), ncol, integer(1))
-    expect_equal(ncol(fd), sum(1, ncd, ndr))
-    # duplicated PCs
-    reducedDim(df, "PCB") <- reducedDim(df, "PCA")
-    fd <- as_tibble(mutate(df, abc=1))
-    expect_equal(ncol(fd), ncol(as_tibble(df))+1)
+    # One row per feature and sample (cell), not one row per cell
+    expect_equal(nrow(fd), nrow(df)*ncol(df))
+    expect_true(all(c(".feature", ".sample") %in% colnames(fd)))
+    expect_false(".cell" %in% colnames(fd))
+    # Assays are columns
+    expect_true(all(assayNames(df) %in% colnames(fd)))
+})
+
+test_that("as_tibble() exposes reduced dimensions as view-only columns", {
+    fd <- as_tibble(df)
+    expect_true(all(c("PC_1", "tSNE_1") %in% colnames(fd)))
+    # Column-aligned: constant within a cell
+    n <- dplyr::n_distinct(fd[fd$.sample == fd$.sample[1], ][["PC_1"]])
+    expect_identical(n, 1L)
+    # Still absent from colData
+    expect_false("PC_1" %in% colnames(colData(df)))
 })
 
 test_that("aggregate_cells()", {

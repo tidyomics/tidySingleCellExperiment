@@ -83,10 +83,7 @@ Methods available in currently loaded packages:
 \examples{
 data(pbmc_small)
 tt <- pbmc_small
-tt |> anti_join(tt |> 
-  distinct(groups) |>  
-  mutate(new_column=1:2) |> 
-  slice(1))
+tt |> anti_join(tt |> distinct(groups) |> mutate(new_column=1) |> slice(1))
 
 }
 \references{

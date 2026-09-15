@@ -305,7 +305,7 @@ pbmc_small_cluster %>%
     join_features(features=marker_genes, shape="long") %>%
     group_by(label) %>%
     heatmap(
-        .row=.feature, .column=.cell, 
+        .row=.feature, .column=.sample, 
         .value=.abundance_counts, scale="column")
 ```
 

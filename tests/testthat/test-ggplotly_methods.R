@@ -11,7 +11,8 @@ test_that("ggplot()", {
     # assay data
     g <- sample(rownames(df), 1)
     fd <- join_features(df, g, shape="wide")
-    p <- ggplot(fd, aes(factor, .data[[make.names(g)]]))
+    # The feature keeps its original name, which need not be syntactic
+    p <- ggplot(fd, aes(factor, .data[[g]]))
     expect_silent(show(p))
     expect_s3_class(p, "ggplot")
     # reduced dimensions
