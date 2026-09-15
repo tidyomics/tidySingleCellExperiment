@@ -1,6 +1,15 @@
 \name{NEWS}
 \title{News for Package \pkg{tidySingleCellExperiment}}
 
+\section{Changes in version 1.20.2, Bioconductor 3.22 Release}{
+\itemize{
+    \item Refactored \code{aggregate_cells()} to use \code{scrapper::aggregateAcrossCells.se()} for cell aggregation.
+    \item \code{aggregate_cells()} now returns a \code{SummarizedExperiment} with preserved \code{rowData} and aggregated \code{colData}.
+    \item Added \code{.by} argument to \code{aggregate_cells()} for tidyverse-style grouping.
+    \item Soft-deprecated \code{.sample} in \code{aggregate_cells()} in favor of \code{.by}.
+    \item Added \pkg{scrapper} to Suggests.
+}}
+
 \section{Changes in version 1.19.2, Bioconductor 3.22 Release}{
 \itemize{
     \item Soft deprecated \code{bind_rows()} in favor of \code{append_samples()} from ttservice.
