@@ -1,13 +1,18 @@
 data(pbmc_small)
 df <- pbmc_small
 
-test_that("show()", {
+test_that("show() uses standard display by default", {
+    options(tidyprint.use_tidy_print = FALSE)
     txt <- capture.output(show(df))
-    expect_equal(grep("SingleCellExperiment", txt), 1)
-    i <- grep(str <- ".*Features=([0-9]+).*", txt)
-    expect_equal(gsub(str, "\\1", txt[i]), paste(nrow(df)))
-    i <- grep(str <- ".*Cells=([0-9]+).*", txt)
-    expect_equal(gsub(str, "\\1", txt[i]), paste(ncol(df)))
+    expect_true(any(grepl("^class: SingleCellExperiment", txt)))
+    expect_true(any(grepl("^dim: ", txt)))
+})
+
+test_that("show() uses tidyprint when enabled", {
+    options(tidyprint.use_tidy_print = TRUE)
+    on.exit(options(tidyprint.use_tidy_print = FALSE), add=TRUE)
+    txt <- capture.output(show(df))
+    expect_true(any(grepl("SummarizedExperiment-tibble abstraction", txt, fixed=TRUE)))
 })
 
 test_that("join_features()", {

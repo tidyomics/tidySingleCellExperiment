@@ -1,7 +1,7 @@
 Type: Package
 Package: tidySingleCellExperiment
 Title: Brings SingleCellExperiment to the Tidyverse 
-Version: 1.20.1
+Version: 1.20.2
 Authors@R: c(person("Stefano", "Mangiola", 
     comment=c(ORCID="0000-0001-7474-836X"),
     email="mangiolastefano@gmail.com",
@@ -21,6 +21,7 @@ Depends:
     SingleCellExperiment,
     ttservice (>= 0.4.0)
 Imports:
+    tidyprint,
     dplyr, 
     tidyr, 
     SummarizedExperiment,
@@ -39,8 +40,6 @@ Imports:
     vctrs,
     pillar,
     stringr,
-    cli,
-    fansi,
     Matrix,
     stats,
     generics
@@ -72,6 +71,6 @@ biocViews:
     AssayDomain, Infrastructure, RNASeq, DifferentialExpression, SingleCell,
     GeneExpression, Normalization, Clustering, QualityControl, Sequencing
 Encoding: UTF-8
-RoxygenNote: 7.3.3
 URL: https://github.com/stemangiola/tidySingleCellExperiment
 BugReports: https://github.com/stemangiola/tidySingleCellExperiment/issues
+Config/roxygen2/version: 8.0.0

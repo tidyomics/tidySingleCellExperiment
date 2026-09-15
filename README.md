@@ -82,6 +82,48 @@ library(tidyHeatmap)
 library(tidySingleCellExperiment)
 ```
 
+# Opting In and Out of Tidy Print
+
+By default, the standard SingleCellExperiment print format is used. You
+can opt in to use the tidy tibble-style display, and opt out at any
+time. The setting can be configured for the current R session only, or
+saved to persist across sessions.
+
+**Opt In to Tidy Print**
+
+To enable the tidy print format, use `tidy_print_on()`. By default, this
+only affects the current R session:
+
+``` r
+# Enable tidy print for current session only
+tidy_print_on()
+pbmc_small  # Will display with tidy tibble-style format
+```
+
+If you want the setting to persist across R sessions, use
+`remember = TRUE`:
+
+``` r
+# Enable tidy print and remember the setting
+tidy_print_on(remember = TRUE)
+```
+
+**Opt Out of Tidy Print**
+
+To return to the standard SingleCellExperiment print format, use
+`tidy_print_off()`. By default, this only affects the current session:
+
+``` r
+# Disable tidy print for current session only
+tidy_print_off()
+```
+
+To permanently disable tidy print and clear any saved preference:
+
+``` r
+tidy_print_off(remember = TRUE)
+```
+
 # Data representation of `tidySingleCellExperiment`
 
 This is a *SingleCellExperiment* object but it is evaluated as a tibble.
@@ -94,25 +136,26 @@ data(pbmc_small, package="tidySingleCellExperiment")
 **It looks like a tibble**
 
 ``` r
+tidy_print_on()
 pbmc_small
 ```
 
-    ## # A SingleCellExperiment-tibble abstraction: 80 × 17
-    ## # [90mFeatures=230 | Cells=80 | Assays=counts, logcounts[0m
+    ## # A SingleCellExperiment-tibble abstraction: 80 � 17
+    ## # Features=230 | Cells=80 | Assays=counts, logcounts
     ##    .cell orig.ident nCount_RNA nFeature_RNA RNA_snn_res.0.8 letter.idents groups
     ##    <chr> <fct>           <dbl>        <int> <fct>           <fct>         <chr> 
-    ##  1 ATGC… SeuratPro…         70           47 0               A             g2    
-    ##  2 CATG… SeuratPro…         85           52 0               A             g1    
-    ##  3 GAAC… SeuratPro…         87           50 1               B             g2    
-    ##  4 TGAC… SeuratPro…        127           56 0               A             g2    
-    ##  5 AGTC… SeuratPro…        173           53 0               A             g2    
-    ##  6 TCTG… SeuratPro…         70           48 0               A             g1    
-    ##  7 TGGT… SeuratPro…         64           36 0               A             g1    
-    ##  8 GCAG… SeuratPro…         72           45 0               A             g1    
-    ##  9 GATA… SeuratPro…         52           36 0               A             g1    
-    ## 10 AATG… SeuratPro…        100           41 0               A             g1    
-    ## # ℹ 70 more rows
-    ## # ℹ 10 more variables: RNA_snn_res.1 <fct>, file <chr>, ident <fct>,
+    ##  1 ATGC? SeuratPro?         70           47 0               A             g2    
+    ##  2 CATG? SeuratPro?         85           52 0               A             g1    
+    ##  3 GAAC? SeuratPro?         87           50 1               B             g2    
+    ##  4 TGAC? SeuratPro?        127           56 0               A             g2    
+    ##  5 AGTC? SeuratPro?        173           53 0               A             g2    
+    ##  6 TCTG? SeuratPro?         70           48 0               A             g1    
+    ##  7 TGGT? SeuratPro?         64           36 0               A             g1    
+    ##  8 GCAG? SeuratPro?         72           45 0               A             g1    
+    ##  9 GATA? SeuratPro?         52           36 0               A             g1    
+    ## 10 AATG? SeuratPro?        100           41 0               A             g1    
+    ## # ? 70 more rows
+    ## # ? 10 more variables: RNA_snn_res.1 <fct>, file <chr>, ident <fct>,
     ## #   PC_1 <dbl>, PC_2 <dbl>, PC_3 <dbl>, PC_4 <dbl>, PC_5 <dbl>, tSNE_1 <dbl>,
     ## #   tSNE_2 <dbl>
 
@@ -135,31 +178,6 @@ assay(pbmc_small, "counts")[1:5, 1:5]
     ## CD79A                .
     ## HLA-DRA              1
     ## TCL1A                .
-
-The `SingleCellExperiment` object’s tibble visualisation can be turned
-off, or back on at any time.
-
-``` r
-# Turn off the tibble visualisation
-options("restore_SingleCellExperiment_show" = TRUE)
-pbmc_small
-```
-
-    ## class: SingleCellExperiment 
-    ## dim: 230 80 
-    ## metadata(0):
-    ## assays(2): counts logcounts
-    ## rownames(230): MS4A1 CD79B ... SPON2 S100B
-    ## rowData names(5): vst.mean vst.variance vst.variance.expected
-    ##   vst.variance.standardized vst.variable
-    ## colnames(80): ATGCCAGAACGACT CATGGCCTGTGCAT ... GGAACACTTCAGAC
-    ##   CTTGATTGATCTTC
-    ## colData names(9): orig.ident nCount_RNA ... file ident
-
-``` r
-# Turn on the tibble visualisation
-options("restore_SingleCellExperiment_show" = FALSE)
-```
 
 # Annotation polishing
 

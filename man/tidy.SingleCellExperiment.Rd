@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A `SingleCellExperiment` object.}
 
-\item{...}{Additional arguments passed to \code{generics::tidy}. (Unused.)}
+\item{...}{Additional arguments passed to `generics::tidy`. (Unused.)}
 }
 \value{
 A `tidySingleCellExperiment` object. (DEPRECATED - not needed anymore)

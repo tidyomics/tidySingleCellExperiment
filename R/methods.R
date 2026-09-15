@@ -1,19 +1,3 @@
-#' @importFrom methods getMethod
-setMethod(
-    f="show",
-    signature="SingleCellExperiment",
-    definition=function(object) {
-        opt <- getOption("restore_SingleCellExperiment_show", default=FALSE)
-        if (isTRUE(opt)) {
-            f <- getMethod(
-                f="show",
-                signature="SummarizedExperiment",
-                where=asNamespace(ns="SummarizedExperiment"))
-            f(object=object)
-        } else { print(object) }
-    }
-)
-
 setClass("tidySingleCellExperiment", contains="SingleCellExperiment")
 
 #' @name join_features

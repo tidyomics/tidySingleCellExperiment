@@ -22,11 +22,8 @@ summary functions. The name will be the name of the variable in the result.
 The value can be:
 \itemize{
 \item A vector of length 1, e.g. \code{min(x)}, \code{n()}, or \code{sum(is.na(y))}.
-\item A data frame, to add multiple columns from a single expression.
-}
-
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Returning values with size 0 or >1 was
-deprecated as of 1.1.0. Please use \code{\link[dplyr:reframe]{reframe()}} for this instead.}
+\item A data frame with 1 row, to add multiple columns from a single expression.
+}}
 }
 \value{
 An object \emph{usually} of the same type as \code{.data}.
@@ -103,10 +100,10 @@ Hutchison, W.J., Keyes, T.J., The tidyomics Consortium. et al. The tidyomics eco
 Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, et al. Welcome to the tidyverse. Journal of Open Source Software. 2019;4(43):1686. https://doi.org/10.21105/joss.01686
 }
 \seealso{
-Other single table verbs: 
-\code{\link{arrange}()},
-\code{\link{mutate}()},
-\code{\link{rename}()},
-\code{\link{slice}()}
+Other single table verbs:
+\code{\link{arrange}},
+\code{\link{mutate}},
+\code{\link{rename}},
+\code{\link{slice}}
 }
 \concept{single table verbs}

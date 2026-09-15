@@ -76,6 +76,47 @@ library(Matrix)
 library(dittoSeq)
 ```
 
+```{r, echo=FALSE}
+# Use standard print for initial examples
+tidy_print_off()
+```
+
+# Opting In and Out of Tidy Print
+
+By default, the standard SingleCellExperiment print format is used. You can opt in to use the tidy tibble-style display, and opt out at any time. The setting can be configured for the current R session only, or saved to persist across sessions.
+
+**Opt In to Tidy Print**
+
+To enable the tidy print format, use `tidy_print_on()`. By default, this only affects the current R session:
+
+```{r, eval=FALSE}
+# Enable tidy print for current session only
+tidy_print_on()
+pbmc_small_tidy  # Will display with tidy tibble-style format
+```
+
+If you want the setting to persist across R sessions, use `remember = TRUE`:
+
+```{r, eval=FALSE}
+# Enable tidy print and remember the setting
+tidy_print_on(remember = TRUE)
+```
+
+**Opt Out of Tidy Print**
+
+To return to the standard SingleCellExperiment print format, use `tidy_print_off()`. By default, this only affects the current session:
+
+```{r, eval=FALSE}
+# Disable tidy print for current session only
+tidy_print_off()
+```
+
+To permanently disable tidy print and clear any saved preference:
+
+```{r, eval=FALSE}
+tidy_print_off(remember = TRUE)
+```
+
 # Data representation of `tidySingleCellExperiment`
 
 This is a `SingleCellExperiment` object but it is evaluated as a `tibble`.
@@ -89,6 +130,7 @@ pbmc_small_tidy <- pbmc_small
 **It looks like a `tibble`...**
 
 ```{r}
+tidy_print_on()
 pbmc_small_tidy
 ```
 
@@ -96,18 +138,6 @@ pbmc_small_tidy
 
 ```{r}
 counts(pbmc_small_tidy)[1:5, 1:4]
-```
-
-The `SingleCellExperiment` object's tibble visualisation can be turned off, or back on at any time.
-
-```{r}
-# Turn off the tibble visualisation
-options("restore_SingleCellExperiment_show" = TRUE)
-pbmc_small_tidy
-```
-```{r}
-# Turn on the tibble visualisation
-options("restore_SingleCellExperiment_show" = FALSE)
 ```
 
 # Annotation polishing

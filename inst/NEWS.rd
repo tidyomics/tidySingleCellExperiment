@@ -1,6 +1,12 @@
 \name{NEWS}
 \title{News for Package \pkg{tidySingleCellExperiment}}
 
+\section{Changes in version 1.20.2}{
+\itemize{
+    \item Printing is now handled by \pkg{tidyprint}, matching tidySummarizedExperiment. The standard SingleCellExperiment display is the default; use \code{tidy_print_on()}/\code{tidy_print_off()} to toggle the tidy tibble-style display.
+    \item Package messages now use \code{tidyprint::tidy_message()} for consistent tidyomics styling.
+}}
+
 \section{Changes in version 1.19.2, Bioconductor 3.22 Release}{
 \itemize{
     \item Soft deprecated \code{bind_rows()} in favor of \code{append_samples()} from ttservice.
