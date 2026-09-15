@@ -104,13 +104,14 @@ get_abundance_sc_wide <- function(.data,
     # Check if output would be too big without forcing
     if (isFALSE(all) && is.null(features)) {
         if (!length(variable_feature)) {
-            stop("Your object does not contain variable feature labels,\n",
+            tidy_stop(paste0(
+                "Your object does not contain variable feature labels,\n",
                 " feature argument is empty and all arguments are set to FALSE.\n",
                 " Either:\n",
                 " 1. use detect_variable_features() to select variable feature\n",
                 " 2. pass an array of feature names\n",
                 " 3. set all=TRUE (this will output a very large object;",
-                " does your computer have enough RAM?)")
+                " does your computer have enough RAM?)"))
         } else {
             # Get variable features if existing
             variable_genes <- variable_feature
@@ -124,9 +125,7 @@ get_abundance_sc_wide <- function(.data,
     } else if (!is.null(features)) {
         gs <- features
     } else {
-        stop("It is not convenient to extract all genes.",
-            " You should have either variable features,",
-            " or a feature list to extract.")
+        tidy_stop("It is not convenient to extract all genes. You should have either variable features, or a feature list to extract.")
     }
     mtx <- assay(.data, assay)
     mtx <- mtx[gs, , drop=FALSE]
@@ -168,13 +167,14 @@ get_abundance_sc_long <- function(.data,
     # Check if output would be too big without forcing
     if (isFALSE(all) && is.null(features)) {
         if (!length(variable_feature)) {
-            stop("Your object does not contain variable feature labels,\n",
+            tidy_stop(paste0(
+                "Your object does not contain variable feature labels,\n",
                 " feature argument is empty and all arguments are set to FALSE.\n",
                 " Either:\n",
                 " 1. use detect_variable_features() to select variable feature\n",
                 " 2. pass an array of feature names\n",
                 " 3. set all=TRUE (this will output a very large object;",
-                " does your computer have enough RAM?)")
+                " does your computer have enough RAM?)"))
         } else {
             # Get variable features if existing
             variable_genes <- variable_feature
@@ -185,9 +185,7 @@ get_abundance_sc_long <- function(.data,
 
     # Check that I have assay names
     if (!length(assayNames(.data)))
-        stop("tidySingleCellExperiment says:",
-            " there are no assay names in the",
-            " source SingleCellExperiment.")
+        tidy_stop("there are no assay names in the source SingleCellExperiment.")
 
     if (!is.null(variable_genes)) {
         gs <- variable_genes
@@ -196,9 +194,7 @@ get_abundance_sc_long <- function(.data,
     } else if (isTRUE(all)) {
         gs <- TRUE
     } else {
-        stop("It is not convenient to extract all genes.",
-            " You should have either variable features,",
-            " or a feature list to extract.")
+        tidy_stop("It is not convenient to extract all genes. You should have either variable features, or a feature list to extract.")
     }
 
     assays(.data) %>%
@@ -327,11 +323,9 @@ select_helper <- function(.data, ...) {
     dplyr::select(.data, all_of(loc))
 }
 
-data_frame_returned_message <- paste(
-    "tidySingleCellExperiment says:",
-    "A data frame is returned for independent data analysis.")
+data_frame_returned_message <-
+    "A data frame is returned for independent data analysis."
 duplicated_cell_names <- paste(
-    "tidySingleCellExperiment says:",
     "This operation lead to duplicated cell names.",
     "A data frame is returned for independent data analysis.")
 
@@ -352,12 +346,12 @@ is_sample_feature_deprecated_used <- function(
         ("cell" %in% as.character(user_columns) || (cell && !.cell))
 
     if (old_standard_is_used) {
-        warning("tidySingleCellExperiment says:",
-            " from version 1.3.1, the special columns including",
+        tidy_warning(paste0(
+            "from version 1.3.1, the special columns including",
             " cell id (colnames(se)) has changed to \".cell\".",
             " This dataset is returned with the old-style vocabulary (cell),",
             " however, we suggest to update your workflow",
-            " to reflect the new vocabulary (.cell).")
+            " to reflect the new vocabulary (.cell)."))
         use_old_special_names <- TRUE
     }
     use_old_special_names
@@ -495,8 +489,7 @@ subset <- function(.data, .column)	{
 
     # Check if column present
     if (.data |> select(!!.column) |> colnames() %in% colnames(.data) %>% all %>% `!`)
-      stop("tidySingleCellExperiment says: some of the .column specified",
-           " do not exist in the input data frame.")
+      tidy_stop("some of the .column specified do not exist in the input data frame.")
 
     .data |>
         # Selecting the right columns

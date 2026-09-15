@@ -356,7 +356,7 @@ as_matrix <- function(tbl, rownames=NULL, do_check=TRUE) {
                 unique() %>%
                 `%in%`(c("numeric", "integer")) %>% not() %>% any(),
             ~ {
-                warning("tidybulk says: there are NON-numerical columns, the matrix will NOT be numerical")
+                tidy_warning("there are NON-numerical columns, the matrix will NOT be numerical")
                 .x
             }
         ) %>%

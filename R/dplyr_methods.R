@@ -54,9 +54,7 @@ bind_rows.SingleCellExperiment <- function(..., .id=NULL, add.cell.ids=NULL) {
     
     # If duplicated cell names
     if (new_obj %>% colnames %>% duplicated %>% which %>% length %>% gt(0))
-        warning("tidySingleCellExperiment says:",
-            " you have duplicated cell names;",
-            " they will be made unique.")
+        tidy_warning("you have duplicated cell names; they will be made unique.")
     colnames(new_obj) <- make.unique(colnames(new_obj), sep="_")
     
     new_obj
@@ -92,8 +90,7 @@ append_samples.SingleCellExperiment <- function(x, ..., .id = NULL) {
 
     # If duplicated cell names
     if (any(duplicated(colnames(new_obj)))) {
-        warning("tidySingleCellExperiment says:",
-                " you have duplicated cell names, they will be made unique.")
+        tidy_warning("you have duplicated cell names, they will be made unique.")
         unique_colnames <- make.unique(colnames(new_obj), sep = "_")
         colnames(new_obj) <- unique_colnames
     }
@@ -137,7 +134,7 @@ bind_cols.SingleCellExperiment <- bind_cols_
 #' @importFrom dplyr distinct
 #' @export
 distinct.SingleCellExperiment <- function(.data, ..., .keep_all=FALSE) {
-    message(data_frame_returned_message)
+    tidy_message(data_frame_returned_message)
     
     # Deprecation of special column names
     .cols <- enquos(..., .ignore_empty="all") %>% 
@@ -185,10 +182,10 @@ filter.SingleCellExperiment <- function(.data, ..., .preserve=FALSE) {
     # Try to solve missing colnames
     .cell <- c_(.data)$symbol
     if (colnames(.data) |> is.null()) {
-        message("tidySingleCellExperiment says: ",
-            "the input object does not have cell names (colnames(...)).\n",
+        tidy_message(paste0(
+            "the input object does not have cell names (colnames(...)). ",
             "Therefore, the cell column in the filtered tibble abstraction ",
-            "will still include an incremental integer vector.")
+            "will still include an incremental integer vector."))
         new_meta <- new_meta %>% mutate(!!.cell := as.integer(!!.cell))
     }
     
@@ -215,7 +212,7 @@ filter.SingleCellExperiment <- function(.data, ..., .preserve=FALSE) {
 group_by.SingleCellExperiment <- function(.data, ..., 
     .add=FALSE, .drop=group_by_drop_default(.data)) {
     
-    message(data_frame_returned_message)
+    tidy_message(data_frame_returned_message)
     
     # Deprecation of special column names
     .cols <- enquos(..., .ignore_empty="all") %>% 
@@ -248,7 +245,7 @@ group_by.SingleCellExperiment <- function(.data, ...,
 #' @importFrom purrr map
 #' @export
 summarise.SingleCellExperiment <- function(.data, ...) {
-    message(data_frame_returned_message)
+    tidy_message(data_frame_returned_message)
     
     # Deprecation of special column names
     .cols <- enquos(..., .ignore_empty="all") %>% 
@@ -309,12 +306,12 @@ mutate.SingleCellExperiment <- function(.data, ...) {
         length()
     
     if (.test) {
-        stop("tidySingleCellExperiment says:",
-            " you are trying to mutate a column that is view only",
-            " ", paste(.view_only_cols, collapse=", "),
-            " (it is not present in the colData).",
-            " If you want to mutate a view-only column, make a copy",
-            " (e.g. mutate(new_column=", cols[1], ")) and mutate that one.")
+        tidy_stop(paste0(
+            "you are trying to mutate a column that is view only ",
+            paste(.view_only_cols, collapse=", "),
+            " (it is not present in the colData). ",
+            "If you want to mutate a view-only column, make a copy ",
+            "(e.g. mutate(new_column=", cols[1], ")) and mutate that one."))
     }
     
     colData(.data) <-
@@ -369,12 +366,12 @@ rename.SingleCellExperiment <- function(.data, ...) {
     
     # Check that you are not impacting any read-only columns
     if (any(changed_columns %in% read_only_columns)) {
-        stop("tidySingleCellExperiment says:",
-            " you are trying to rename a column that is view only",
-            " ", paste(changed_columns, collapse=", "),
-            " (it is not present in the colData).",
-            " If you want to rename a view-only column, make a copy",
-            " (e.g., mutate(", cols_from[1], "=",  changed_columns[1], ")).")
+        tidy_stop(paste0(
+            "you are trying to rename a column that is view only ",
+            paste(changed_columns, collapse=", "),
+            " (it is not present in the colData). ",
+            "If you want to rename a view-only column, make a copy ",
+            "(e.g., mutate(", cols_from[1], "=",  changed_columns[1], "))."))
     }
     
     colData(.data) <- 
@@ -401,7 +398,7 @@ rename.SingleCellExperiment <- function(.data, ...) {
 #' @importFrom dplyr rowwise
 #' @export
 rowwise.SingleCellExperiment <- function(data, ...) {
-    message(data_frame_returned_message)
+    tidy_message(data_frame_returned_message)
     
     data %>%
         as_tibble() %>%
@@ -425,7 +422,7 @@ rowwise.SingleCellExperiment <- function(data, ...) {
         
         # If duplicated cells returns tibble
         if (any(duplicated(z[[c_(x)$name]]))) {
-            message(duplicated_cell_names)
+            tidy_message(duplicated_cell_names)
             return(z)
         }
         
@@ -455,7 +452,7 @@ rowwise.SingleCellExperiment <- function(data, ...) {
     
     # If duplicated cells returns tibble
     if (any(duplicated(z[[c_(x)$name]]))) {
-      message(duplicated_cell_names)
+      tidy_message(duplicated_cell_names)
       return(z)
     }
     
@@ -650,8 +647,7 @@ slice_sample.SingleCellExperiment <- function(.data, ..., n=NULL,
             slice_sample(..., prop=prop, by={{ by }},
                 weight_by={{ weight_by }}, replace=replace)
     else
-        stop("tidySingleCellExperiment says:",
-            " you should provide `n` or `prop` arguments")
+        tidy_stop("you should provide `n` or `prop` arguments")
 
     count_cells <- new_meta %>%
         select(!!c_(.data)$symbol) %>%
@@ -661,8 +657,7 @@ slice_sample.SingleCellExperiment <- function(.data, ..., n=NULL,
 
     # If repeated cells due to replacement
     if (.max_cell_count |> gt(1)){
-        message("tidySingleCellExperiment says: When sampling with replacement",
-            " a data frame is returned for independent data analysis.")
+        tidy_message("When sampling with replacement a data frame is returned for independent data analysis.")
         .data |>
             as_tibble()  |>
             right_join(new_meta %>% 
@@ -851,9 +846,8 @@ select.SingleCellExperiment <- function(.data, ...) {
     
     # If key columns are missing, return tibble
     if (!all(get_needed_columns(.data) %in% colnames(new_obj))) {
-        message(
-            "tidySingleCellExperiment says: Key columns are missing.",
-            " A data frame is returned for independent data analysis.")
+        tidy_message(
+            "Key columns are missing. A data frame is returned for independent data analysis.")
         return(new_obj)
     }
     
@@ -897,9 +891,7 @@ sample_n.SingleCellExperiment <- function(tbl, size,
     
     # If repeted cells
     if (count_cells$n %>% max() %>% gt(1)) {
-        message("tidySingleCellExperiment says:",
-            " When sampling with replacement a data frame",
-            " is returned for independent data analysis.")
+        tidy_message("When sampling with replacement a data frame is returned for independent data analysis.")
         tbl %>%
             as_tibble() %>%
             right_join(new_meta %>% select(!!c_(tbl)$symbol), by=c_(tbl)$name)
@@ -929,9 +921,7 @@ sample_frac.SingleCellExperiment <- function(tbl, size=1,
     
     # If repeated cells
     if (count_cells$n %>% max() %>% gt(1)) {
-        message("tidySingleCellExperiment says:",
-            " When sampling with replacement a data frame",
-            " is returned for independent data analysis.")
+        tidy_message("When sampling with replacement a data frame is returned for independent data analysis.")
         tbl %>%
             as_tibble() %>%
             right_join(new_meta %>% select(!!c_(tbl)$symbol), by=c_(tbl)$name)
@@ -960,7 +950,7 @@ count.SingleCellExperiment <- function(x, ...,
     wt=NULL, sort=FALSE, name=NULL, 
     .drop=group_by_drop_default(x)) {
     
-    message(data_frame_returned_message)
+    tidy_message(data_frame_returned_message)
     
     # Deprecation of special column names
     # Deprecation of special column names

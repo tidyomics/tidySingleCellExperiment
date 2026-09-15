@@ -55,7 +55,7 @@ setMethod("join_features", "SingleCellExperiment", function(.data,
                 colnames() %>%
                 stringr::str_subset('.abundance_')
             
-            message(stringr::str_c("tidySingleCellExperiment says: join_features produces",
+            tidy_message(stringr::str_c("join_features produces",
                 " duplicate cell names to accomadate the long data format. For this reason, a data", 
                 " frame is returned for independent data analysis. Assay feature abundance is", 
                 " appended as ", 

@@ -200,7 +200,7 @@ pivot_longer.SingleCellExperiment <- function(data,
     values_transform = NULL) {
     cols <- enquo(cols)
 
-    message(data_frame_returned_message)
+    tidy_message(data_frame_returned_message)
 
     # Deprecation of special column names
     .cols <- c(quo_names(cols))
@@ -269,13 +269,11 @@ unite.SingleCellExperiment <- function(data, col,
         .view_only_cols)
 
     if (remove && length(.test)) {
-        stop("tidySingleCellExperiment says:",
-            " you are trying to rename a column",
-            " that is view only ",
+        tidy_stop(paste0(
+            "you are trying to rename a column that is view only ",
             paste(.view_only_cols, collapse=", "),
-            " (it is not present in the colData).",
-            " If you want to mutate a view-only column,",
-            " make a copy and mutate that one.")
+            " (it is not present in the colData). ",
+            "If you want to mutate a view-only column, make a copy and mutate that one."))
     }
 
     colData(data) <- data %>%
@@ -328,13 +326,11 @@ separate.SingleCellExperiment <- function(data, col, into,
         .view_only_cols)
 
     if (remove && length(.test)) {
-        stop("tidySingleCellExperiment says:",
-            " you are trying to rename a column",
-            " that is view only ",
+        tidy_stop(paste0(
+            "you are trying to rename a column that is view only ",
             paste(.view_only_cols, collapse=", "),
-            "(it is not present in the colData).",
-            " If you want to mutate a view-only column,",
-            " make a copy and mutate that one.")
+            " (it is not present in the colData). ",
+            "If you want to mutate a view-only column, make a copy and mutate that one."))
     }
 
     colData(data) <-
