@@ -1,25 +1,3 @@
-#' This is a generalisation of ifelse that accepts an object and returns an object
-#'
-#' @keywords internal
-#' @noRd
-#'
-#' @importFrom purrr as_mapper
-#'
-#' @param .x A tibble
-#' @param .p A boolean
-#' @param .f1 A function
-#' @param .f2 A function
-#'
-#' @return A tibble
-ifelse_pipe <- function(.x, .p, .f1, .f2 = NULL) {
-    switch(
-        sum(!.p, 1), 
-        as_mapper(.f1)(.x),
-        if (!is.null(.f2)) {
-            as_mapper(.f2)(.x) 
-        } else .x)
-}
-
 #' as_SummarizedExperiment
 #'
 #' @keywords internal
@@ -60,15 +38,14 @@ as_SummarizedExperiment <- function(.data,
     .abundance <- col_names$.abundance
     
     # If present get the scaled abundance
-    .abundance_scaled <- 
-        .data %>%
-        ifelse_pipe(
-            ".abundance_scaled" %in% ((.) %>% get_tt_columns() %>% names) &&
-                # .data %>% get_tt_columns() %$% .abundance_scaled %>% is.null %>% not() &&
-                quo_name((.) %>% get_tt_columns() %$% .abundance_scaled) %in% ((.) %>% colnames),
-            ~ .x %>% get_tt_columns() %$% .abundance_scaled,
-            ~ NULL
-        )
+    .abundance_scaled <- if (
+        ".abundance_scaled" %in% (.data %>% get_tt_columns() %>% names) &&
+            quo_name(.data %>% get_tt_columns() %$% .abundance_scaled) %in% colnames(.data)
+    ) {
+        .data %>% get_tt_columns() %$% .abundance_scaled
+    } else {
+        NULL
+    }
     
     # Get which columns are sample wise and which are feature wise
     col_direction <- get_x_y_annotation_columns(.data,
@@ -258,17 +235,14 @@ get_x_y_annotation_columns <- function(.data, .horizontal, .vertical, .abundance
         select(-!!.horizontal, -!!.vertical, -!!.abundance, -any_of(horizontal_cols)) %>%
         colnames %>%
         map(
-            ~
-                .x %>%
-                ifelse_pipe(
-                    .data %>%
-                        select(!!.vertical, !!as.symbol(.x)) |>
-                        distinct() |>
-                        nrow() %>%
-                        equals(n_y),
-                    ~ .x,
-                    ~ NULL
-                )
+            ~ {
+                if (.data %>%
+                    select(!!.vertical, !!as.symbol(.x)) |>
+                    distinct() |>
+                    nrow() %>%
+                    equals(n_y)) .x
+                else NULL
+            }
         ) %>%
         
         # Drop NULL
@@ -276,40 +250,32 @@ get_x_y_annotation_columns <- function(.data, .horizontal, .vertical, .abundance
         unlist
     
     # Counts wise columns, at the moment scaled counts is treated as special and not accounted for here
+    counts_df <- .data %>%
+        select(-!!.horizontal, -!!.vertical, -!!.abundance)
+    
+    if (!is.null(horizontal_cols))
+        counts_df <- counts_df %>% select(-any_of(horizontal_cols))
+    
+    if (!is.null(vertical_cols))
+        counts_df <- counts_df %>% select(-any_of(vertical_cols))
+    
+    if (quo_is_symbol(.abundance_scaled))
+        counts_df <- counts_df %>% select(-!!.abundance_scaled)
+    
     counts_cols <- 
-        .data %>%
-        select(-!!.horizontal, -!!.vertical, -!!.abundance) %>%
-        
-        # Exclude horizontal
-        ifelse_pipe(
-            !is.null(horizontal_cols), 
-            ~ .x %>% select(-any_of(horizontal_cols))) %>%
-        
-        # Exclude vertical
-        ifelse_pipe(
-            !is.null(vertical_cols), 
-            ~ .x %>% select(-any_of(vertical_cols))) %>%
-        
-        # Exclude scaled counts if exist
-        ifelse_pipe(
-            .abundance_scaled %>% quo_is_symbol, 
-            ~ .x %>% select(-!!.abundance_scaled)) %>%
-        
-        # Select colnames
+        counts_df %>%
         colnames %>%
         
         # select columns
         map(
-            ~ .x %>%
-                ifelse_pipe(
-                    .data %>%
-                        select(!!.vertical, !!.horizontal, !!as.symbol(.x)) %>%
-                        distinct() |>
-                        nrow() %>%
-                        equals(n_x * n_y),
-                    ~ .x,
-                    ~ NULL
-                )
+            ~ {
+                if (.data %>%
+                    select(!!.vertical, !!.horizontal, !!as.symbol(.x)) %>%
+                    distinct() |>
+                    nrow() %>%
+                    equals(n_x * n_y)) .x
+                else NULL
+            }
         ) %>%
         
         # Drop NULL
@@ -342,34 +308,25 @@ as_matrix <- function(tbl, rownames=NULL, do_check=TRUE) {
     variable <- NULL
     
     rownames <- enquo(rownames)
-    tbl %>%
-        
-        # Through warning if data frame is not numerical beside the rownames column (if present)
-        ifelse_pipe(
-            do_check &&
-                tbl %>%
-                # If rownames defined eliminate it from the data frame
-                ifelse_pipe(!quo_is_null(rownames), ~ .x[,-1], ~ .x) %>%
-                dplyr::summarise_all(class) %>%
-                tidyr::gather(variable, class) %>%
-                pull(class) %>%
-                unique() %>%
-                `%in%`(c("numeric", "integer")) %>% not() %>% any(),
-            ~ {
-                tidy_warning("there are NON-numerical columns, the matrix will NOT be numerical")
-                .x
-            }
-        ) %>%
-        as.data.frame() %>%
-        
-        # Deal with rownames column if present
-        ifelse_pipe(
-            !quo_is_null(rownames),
-            ~ .x %>%
-                magrittr::set_rownames(tbl %>% pull(!!rownames)) %>%
-                select(-1)
-        ) %>%
-        
-        # Convert to matrix
-        as.matrix()
+    
+    numerical_tbl <- if (!quo_is_null(rownames)) tbl[, -1] else tbl
+    if (do_check &&
+            numerical_tbl %>%
+            dplyr::summarise_all(class) %>%
+            tidyr::gather(variable, class) %>%
+            pull(class) %>%
+            unique() %>%
+            `%in%`(c("numeric", "integer")) %>% not() %>% any()) {
+        tidy_warning("there are NON-numerical columns, the matrix will NOT be numerical")
+    }
+    
+    df <- as.data.frame(tbl)
+    
+    if (!quo_is_null(rownames)) {
+        df <- df %>%
+            magrittr::set_rownames(tbl %>% pull(!!rownames)) %>%
+            select(-1)
+    }
+    
+    as.matrix(df)
 }
